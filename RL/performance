@@ -5,16 +5,23 @@ local Stats = game:GetService("Stats")
 
 local player = Players.LocalPlayer
 
+--// ANTI DUPE: Xóa GUI cũ nếu tồn tại
+local guiName = "PingFpsDisplay"
+local existingGui = game.CoreGui:FindFirstChild(guiName)
+if existingGui then
+    existingGui:Destroy()
+end
+
 --// GUI
 local gui = Instance.new("ScreenGui")
-gui.Name = "PingFpsDisplay"
+gui.Name = guiName
 gui.ResetOnSpawn = false
 gui.Parent = game.CoreGui
 
 --// TEXT LABEL
 local label = Instance.new("TextLabel")
 label.Parent = gui
-label.Size = UDim2.new(0, 200, 0, 20) -- theo yêu cầu Noir
+label.Size = UDim2.new(0, 200, 0, 20)
 label.AnchorPoint = Vector2.new(0.5, 0.5)
 
 -- Center X, 0.15 màn hình từ trên xuống
@@ -34,11 +41,21 @@ local last = tick()
 
 RunService.RenderStepped:Connect(function()
     local now = tick()
-    fps = math.floor(1 / (now - last))
+    local delta = now - last
+    -- Tránh trường hợp delta quá nhỏ gây lỗi
+    if delta > 0 then
+        fps = math.floor(1 / delta)
+    end
     last = now
 
-    -- Ping
-    local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+    -- Ping (thêm kiểm tra an toàn)
+    local ping = 0
+    local success, result = pcall(function()
+        return math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+    end)
+    if success then
+        ping = result
+    end
 
     -- RGB chạy
     hue = (hue + 0.005) % 1
