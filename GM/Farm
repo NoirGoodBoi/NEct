@@ -1,1 +1,1 @@
-
+task.spawn(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/NoirGoodBoi/NEct/refs/heads/main/RL/orbit"))() end)
