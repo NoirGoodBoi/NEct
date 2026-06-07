@@ -701,9 +701,9 @@ local function getPositionOffset()
     local distance = tonumber(distanceBox.Text) or 3
     
     if currentPosition == "Sau lưng" then
-        return Vector3.new(0, 0, -distance)
-    elseif currentPosition == "Trước mặt" then
         return Vector3.new(0, 0, distance)
+    elseif currentPosition == "Trước mặt" then
+        return Vector3.new(0, 0, -distance)
     elseif currentPosition == "Trên đầu" then
         return Vector3.new(0, distance, 0)
     elseif currentPosition == "Dưới chân" then
