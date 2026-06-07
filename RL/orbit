@@ -1,6 +1,5 @@
 --[[
-    Orbit Script
-    bypass Anti tp
+    Orbit Script + Var Tab
     by Noir
 ]]
 
@@ -13,9 +12,35 @@ local userInputService = game:GetService("UserInputService")
 
 local orbiting = false
 local targetPlayer = nil
-local currentMode = "Sau lưng"
+local currentPosition = "Normal"
+local currentMethod = "CFrame"
 local lastPosition = nil
 local isMinimized = false
+local currentTab = "orbit"
+local orbitSpeed = 16
+
+local walkSpeed = 16
+local jumpPower = 50
+local infJump = false
+local noClip = false
+local espEnabled = false
+local noclipConnection = nil
+local infJumpConnection = nil
+local espConnections = {}
+
+local btnWidth = 140
+local btnHeight = 40
+local col1 = 15
+local col2 = 165
+local row1 = 15
+local row2 = 65
+local row3 = 115
+local row4 = 165
+local row5 = 215
+
+local orbitHeight = 280 
+local settingsHeight = 230 
+local minHeight = 280
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "OrbitGUI"
@@ -24,7 +49,7 @@ screenGui.Parent = player.PlayerGui
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 280)
+mainFrame.Size = UDim2.new(0, 320, 0, orbitHeight)
 mainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)
 mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 mainFrame.BackgroundTransparency = 0.05
@@ -32,6 +57,7 @@ mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
 mainFrame.Active = true
 mainFrame.Draggable = false
+mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 
 local mainCorner = Instance.new("UICorner")
@@ -64,7 +90,7 @@ headerStroke.Transparency = 0.3
 headerStroke.Parent = header
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, -70, 1, 0)
+titleLabel.Size = UDim2.new(1, -120, 1, 0)
 titleLabel.Position = UDim2.new(0, 15, 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "⚡ ORBIT CONTROLLER ⚡"
@@ -74,6 +100,16 @@ titleLabel.TextSize = 14
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.TextYAlignment = Enum.TextYAlignment.Center
 titleLabel.Parent = header
+
+local tabButton = Instance.new("TextButton")
+tabButton.Size = UDim2.new(0, 30, 1, 0)
+tabButton.Position = UDim2.new(1, -100, 0, 0)
+tabButton.BackgroundTransparency = 1
+tabButton.Text = "⋯"
+tabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+tabButton.Font = Enum.Font.GothamBold
+tabButton.TextSize = 18
+tabButton.Parent = header
 
 local minimizeButton = Instance.new("TextButton")
 minimizeButton.Size = UDim2.new(0, 30, 1, 0)
@@ -101,145 +137,112 @@ contentContainer.Position = UDim2.new(0, 0, 0, 35)
 contentContainer.BackgroundTransparency = 1
 contentContainer.Parent = mainFrame
 
-local playerListFrame = Instance.new("Frame")
-playerListFrame.Size = UDim2.new(0, 320, 0, 280)
-playerListFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-playerListFrame.BackgroundTransparency = 0.05
-playerListFrame.BorderSizePixel = 2
-playerListFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
-playerListFrame.Visible = false
-playerListFrame.Parent = screenGui
-playerListFrame.ClipsDescendants = true
+local orbitTab = Instance.new("ScrollingFrame")
+orbitTab.Size = UDim2.new(1, 0, 1, 0)
+orbitTab.BackgroundTransparency = 1
+orbitTab.ScrollBarThickness = 4
+orbitTab.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
+orbitTab.CanvasSize = UDim2.new(0, 0, 0, orbitHeight - 10)
+orbitTab.Parent = contentContainer
 
-local playerListCorner = Instance.new("UICorner")
-playerListCorner.CornerRadius = UDim.new(0, 12)
-playerListCorner.Parent = playerListFrame
+local orbitContainer = Instance.new("Frame")
+orbitContainer.Size = UDim2.new(1, 0, 0, orbitHeight - 10)
+orbitContainer.BackgroundTransparency = 1
+orbitContainer.Parent = orbitTab
 
-local playerListStroke = Instance.new("UIStroke")
-playerListStroke.Color = Color3.fromRGB(128, 0, 255)
-playerListStroke.Thickness = 2
-playerListStroke.Transparency = 0.2
-playerListStroke.Parent = playerListFrame
+local settingsTab = Instance.new("ScrollingFrame")
+settingsTab.Size = UDim2.new(1, 0, 1, 0)
+settingsTab.BackgroundTransparency = 1
+settingsTab.ScrollBarThickness = 4
+settingsTab.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
+settingsTab.Visible = false
+settingsTab.CanvasSize = UDim2.new(0, 0, 0, settingsHeight - 10)
+settingsTab.Parent = contentContainer
 
-local playerListHeader = Instance.new("Frame")
-playerListHeader.Size = UDim2.new(1, 0, 0, 35)
-playerListHeader.Position = UDim2.new(0, 0, 0, 0)
-playerListHeader.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-playerListHeader.BackgroundTransparency = 0.1
-playerListHeader.BorderSizePixel = 2
-playerListHeader.BorderColor3 = Color3.fromRGB(128, 0, 255)
-playerListHeader.Parent = playerListFrame
+local settingsContainer = Instance.new("Frame")
+settingsContainer.Size = UDim2.new(1, 0, 0, settingsHeight - 10)
+settingsContainer.BackgroundTransparency = 1
+settingsContainer.Parent = settingsTab
 
-local playerListHeaderCorner = Instance.new("UICorner")
-playerListHeaderCorner.CornerRadius = UDim.new(0, 12)
-playerListHeaderCorner.Parent = playerListHeader
+local function createSidePanel(name, title, width, height)
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.new(0, width, 0, height)
+    panel.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    panel.BackgroundTransparency = 0.05
+    panel.BorderSizePixel = 2
+    panel.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    panel.Visible = false
+    panel.Parent = screenGui
+    panel.ClipsDescendants = true
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = panel
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(128, 0, 255)
+    stroke.Thickness = 2
+    stroke.Transparency = 0.2
+    stroke.Parent = panel
+    
+    local headerPanel = Instance.new("Frame")
+    headerPanel.Size = UDim2.new(1, 0, 0, 35)
+    headerPanel.Position = UDim2.new(0, 0, 0, 0)
+    headerPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    headerPanel.BackgroundTransparency = 0.1
+    headerPanel.BorderSizePixel = 2
+    headerPanel.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    headerPanel.Parent = panel
+    
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 12)
+    headerCorner.Parent = headerPanel
+    
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -20, 1, 0)
+    titleLabel.Position = UDim2.new(0, 10, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextSize = 13
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+    titleLabel.Parent = headerPanel
+    
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0, 30, 1, 0)
+    closeBtn.Position = UDim2.new(1, -35, 0, 0)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Text = "×"
+    closeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 16
+    closeBtn.Parent = headerPanel
+    
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, 0, 1, -35)
+    scroll.Position = UDim2.new(0, 0, 0, 35)
+    scroll.BackgroundTransparency = 1
+    scroll.ScrollBarThickness = 6
+    scroll.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
+    scroll.Parent = panel
+    
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 6)
+    layout.SortOrder = Enum.SortOrder.Name
+    layout.Parent = scroll
+    
+    return panel, scroll, layout, closeBtn
+end
 
-local playerListTitle = Instance.new("TextLabel")
-playerListTitle.Size = UDim2.new(1, -20, 1, 0)
-playerListTitle.Position = UDim2.new(0, 10, 0, 0)
-playerListTitle.BackgroundTransparency = 1
-playerListTitle.Text = "📋 DANH SÁCH NGƯỜI CHƠI"
-playerListTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-playerListTitle.Font = Enum.Font.GothamBold
-playerListTitle.TextSize = 13
-playerListTitle.TextXAlignment = Enum.TextXAlignment.Left
-playerListTitle.TextYAlignment = Enum.TextYAlignment.Center
-playerListTitle.Parent = playerListHeader
-
-local closePlayerBtn = Instance.new("TextButton")
-closePlayerBtn.Size = UDim2.new(0, 30, 1, 0)
-closePlayerBtn.Position = UDim2.new(1, -35, 0, 0)
-closePlayerBtn.BackgroundTransparency = 1
-closePlayerBtn.Text = "×"
-closePlayerBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-closePlayerBtn.Font = Enum.Font.GothamBold
-closePlayerBtn.TextSize = 16
-closePlayerBtn.Parent = playerListHeader
-
-local playerListScrolling = Instance.new("ScrollingFrame")
-playerListScrolling.Size = UDim2.new(1, 0, 1, -35)
-playerListScrolling.Position = UDim2.new(0, 0, 0, 35)
-playerListScrolling.BackgroundTransparency = 1
-playerListScrolling.ScrollBarThickness = 6
-playerListScrolling.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
-playerListScrolling.Parent = playerListFrame
-
-local playerListLayout = Instance.new("UIListLayout")
-playerListLayout.Padding = UDim.new(0, 6)
-playerListLayout.SortOrder = Enum.SortOrder.Name
-playerListLayout.Parent = playerListScrolling
-
-local modeListFrame = Instance.new("Frame")
-modeListFrame.Size = UDim2.new(0, 250, 0, 250)
-modeListFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-modeListFrame.BackgroundTransparency = 0.05
-modeListFrame.BorderSizePixel = 2
-modeListFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
-modeListFrame.Visible = false
-modeListFrame.Parent = screenGui
-modeListFrame.ClipsDescendants = true
-
-local modeListCorner = Instance.new("UICorner")
-modeListCorner.CornerRadius = UDim.new(0, 12)
-modeListCorner.Parent = modeListFrame
-
-local modeListStroke = Instance.new("UIStroke")
-modeListStroke.Color = Color3.fromRGB(128, 0, 255)
-modeListStroke.Thickness = 2
-modeListStroke.Transparency = 0.2
-modeListStroke.Parent = modeListFrame
-
-local modeListHeader = Instance.new("Frame")
-modeListHeader.Size = UDim2.new(1, 0, 0, 35)
-modeListHeader.Position = UDim2.new(0, 0, 0, 0)
-modeListHeader.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-modeListHeader.BackgroundTransparency = 0.1
-modeListHeader.BorderSizePixel = 2
-modeListHeader.BorderColor3 = Color3.fromRGB(128, 0, 255)
-modeListHeader.Parent = modeListFrame
-
-local modeListHeaderCorner = Instance.new("UICorner")
-modeListHeaderCorner.CornerRadius = UDim.new(0, 12)
-modeListHeaderCorner.Parent = modeListHeader
-
-local modeListTitle = Instance.new("TextLabel")
-modeListTitle.Size = UDim2.new(1, -20, 1, 0)
-modeListTitle.Position = UDim2.new(0, 10, 0, 0)
-modeListTitle.BackgroundTransparency = 1
-modeListTitle.Text = "⚙️ CHỌN CHẾ ĐỘ"
-modeListTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
-modeListTitle.Font = Enum.Font.GothamBold
-modeListTitle.TextSize = 13
-modeListTitle.TextXAlignment = Enum.TextXAlignment.Left
-modeListTitle.TextYAlignment = Enum.TextYAlignment.Center
-modeListTitle.Parent = modeListHeader
-
-local closeModeBtn = Instance.new("TextButton")
-closeModeBtn.Size = UDim2.new(0, 30, 1, 0)
-closeModeBtn.Position = UDim2.new(1, -35, 0, 0)
-closeModeBtn.BackgroundTransparency = 1
-closeModeBtn.Text = "×"
-closeModeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-closeModeBtn.Font = Enum.Font.GothamBold
-closeModeBtn.TextSize = 16
-closeModeBtn.Parent = modeListHeader
-
-local modeListScrolling = Instance.new("ScrollingFrame")
-modeListScrolling.Size = UDim2.new(1, 0, 1, -35)
-modeListScrolling.Position = UDim2.new(0, 0, 0, 35)
-modeListScrolling.BackgroundTransparency = 1
-modeListScrolling.ScrollBarThickness = 6
-modeListScrolling.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
-modeListScrolling.Parent = modeListFrame
-
-local modeListLayout = Instance.new("UIListLayout")
-modeListLayout.Padding = UDim.new(0, 6)
-modeListLayout.SortOrder = Enum.SortOrder.Name
-modeListLayout.Parent = modeListScrolling
+local playerListFrame, playerListScrolling, playerListLayout, closePlayerBtn = createSidePanel("PlayerList", "📋 DANH SÁCH NGƯỜI CHƠI", 320, 280)
+local positionListFrame, positionListScrolling, positionListLayout, closePositionBtn = createSidePanel("PositionList", "📍 CHỌN VỊ TRÍ", 250, 280)
+local methodListFrame, methodListScrolling, methodListLayout, closeMethodBtn = createSidePanel("MethodList", "⚙️ CHỌN CHẾ ĐỘ ORBIT", 250, 200)
 
 local function createStyledButton(parent, posX, posY, text, color)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 140, 0, 40)
+    btn.Size = UDim2.new(0, btnWidth, 0, btnHeight)
     btn.Position = UDim2.new(0, posX, 0, posY)
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     btn.BackgroundTransparency = 0.2
@@ -248,7 +251,7 @@ local function createStyledButton(parent, posX, posY, text, color)
     btn.Text = text
     btn.TextColor3 = color or Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
+    btn.TextSize = 11
     btn.Parent = parent
     
     local btnCorner = Instance.new("UICorner")
@@ -264,38 +267,49 @@ local function createStyledButton(parent, posX, posY, text, color)
     return btn
 end
 
-local playerListButton = createStyledButton(contentContainer, 15, 20, "👥 DANH SÁCH")
-local modeListButton = createStyledButton(contentContainer, 165, 20, "🎮 CHẾ ĐỘ")
+local function createStyledInput(parent, posX, posY, placeholder, text)
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(0, btnWidth, 0, btnHeight)
+    input.Position = UDim2.new(0, posX, 0, posY)
+    input.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    input.BackgroundTransparency = 0.2
+    input.BorderSizePixel = 2
+    input.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    input.PlaceholderText = placeholder
+    input.Text = text or ""
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.Font = Enum.Font.Gotham
+    input.TextSize = 12
+    input.Parent = parent
+    
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 8)
+    inputCorner.Parent = input
+    
+    local inputStroke = Instance.new("UIStroke")
+    inputStroke.Color = Color3.fromRGB(128, 0, 255)
+    inputStroke.Thickness = 1.5
+    inputStroke.Transparency = 0.4
+    inputStroke.Parent = input
+    
+    return input
+end
 
-local distanceBox = Instance.new("TextBox")
-distanceBox.Size = UDim2.new(0, 140, 0, 40)
-distanceBox.Position = UDim2.new(0, 15, 0, 75)
-distanceBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-distanceBox.BackgroundTransparency = 0.2
-distanceBox.BorderSizePixel = 2
-distanceBox.BorderColor3 = Color3.fromRGB(128, 0, 255)
-distanceBox.Text = "3"
-distanceBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-distanceBox.Font = Enum.Font.GothamBold
-distanceBox.TextSize = 13
-distanceBox.PlaceholderText = "Khoảng cách"
-distanceBox.Parent = contentContainer
+local playerListButton = createStyledButton(orbitContainer, col1, row1, "👥 DANH SÁCH")
+local positionButton = createStyledButton(orbitContainer, col2, row1, "📍 VỊ TRÍ: Normal")
 
-local distanceCorner = Instance.new("UICorner")
-distanceCorner.CornerRadius = UDim.new(0, 8)
-distanceCorner.Parent = distanceBox
+local distanceBox = createStyledInput(orbitContainer, col1, row2, "Khoảng cách", "3")
 
-local distanceStroke = Instance.new("UIStroke")
-distanceStroke.Color = Color3.fromRGB(128, 0, 255)
-distanceStroke.Thickness = 1.5
-distanceStroke.Transparency = 0.4
-distanceStroke.Parent = distanceBox
+local orbitButton = createStyledButton(orbitContainer, col2, row2, "🔴 ORBIT OFF", Color3.fromRGB(255, 100, 100))
 
-local orbitButton = createStyledButton(contentContainer, 165, 75, "🔴 ORBIT OFF", Color3.fromRGB(255, 100, 100))
+local methodButton = createStyledButton(orbitContainer, col1, row3, "⚙️ CHẾ ĐỘ: CFrame")
+
+local speedBox = createStyledInput(orbitContainer, col2, row3, "Speed Orbit", "16")
+speedBox.Visible = false
 
 local playerStatusLabel = Instance.new("TextLabel")
 playerStatusLabel.Size = UDim2.new(0, 290, 0, 32)
-playerStatusLabel.Position = UDim2.new(0, 15, 0, 130)
+playerStatusLabel.Position = UDim2.new(0, 15, 0, row4 + 5)
 playerStatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 playerStatusLabel.BackgroundTransparency = 0.2
 playerStatusLabel.BorderSizePixel = 2
@@ -303,43 +317,133 @@ playerStatusLabel.BorderColor3 = Color3.fromRGB(128, 0, 255)
 playerStatusLabel.Text = "👤 Chưa chọn người chơi"
 playerStatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 playerStatusLabel.Font = Enum.Font.Gotham
-playerStatusLabel.TextSize = 12
+playerStatusLabel.TextSize = 11
 playerStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-playerStatusLabel.Parent = contentContainer
+playerStatusLabel.Parent = orbitContainer
 
 local playerStatusCorner = Instance.new("UICorner")
 playerStatusCorner.CornerRadius = UDim.new(0, 8)
 playerStatusCorner.Parent = playerStatusLabel
 
-local playerStatusStroke = Instance.new("UIStroke")
-playerStatusStroke.Color = Color3.fromRGB(128, 0, 255)
-playerStatusStroke.Thickness = 1.5
-playerStatusStroke.Transparency = 0.4
-playerStatusStroke.Parent = playerStatusLabel
-
 local modeStatusLabel = Instance.new("TextLabel")
 modeStatusLabel.Size = UDim2.new(0, 290, 0, 32)
-modeStatusLabel.Position = UDim2.new(0, 15, 0, 175)
+modeStatusLabel.Position = UDim2.new(0, 15, 0, row5 + 5)
 modeStatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 modeStatusLabel.BackgroundTransparency = 0.2
 modeStatusLabel.BorderSizePixel = 2
 modeStatusLabel.BorderColor3 = Color3.fromRGB(128, 0, 255)
-modeStatusLabel.Text = "⚙️ Chế độ: Sau lưng"
+modeStatusLabel.Text = "⚙️ CFrame | 📍 Normal"
 modeStatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 modeStatusLabel.Font = Enum.Font.Gotham
-modeStatusLabel.TextSize = 12
+modeStatusLabel.TextSize = 11
 modeStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
-modeStatusLabel.Parent = contentContainer
+modeStatusLabel.Parent = orbitContainer
 
 local modeStatusCorner = Instance.new("UICorner")
 modeStatusCorner.CornerRadius = UDim.new(0, 8)
 modeStatusCorner.Parent = modeStatusLabel
 
-local modeStatusStroke = Instance.new("UIStroke")
-modeStatusStroke.Color = Color3.fromRGB(128, 0, 255)
-modeStatusStroke.Thickness = 1.5
-modeStatusStroke.Transparency = 0.4
-modeStatusStroke.Parent = modeStatusLabel
+local speedInput = createStyledInput(settingsContainer, col1, row1, "Tốc độ 16-200", "16")
+speedInput.Text = tostring(walkSpeed)
+local speedBtn = createStyledButton(settingsContainer, col2, row1, "SET SPEED")
+
+local jumpInput = createStyledInput(settingsContainer, col1, row2, "Sức nhảy 50-300", "50")
+jumpInput.Text = tostring(jumpPower)
+local jumpBtn = createStyledButton(settingsContainer, col2, row2, "SET JUMP")
+
+local infJumpBtn = createStyledButton(settingsContainer, col1, row3, "🔁 INF JUMP OFF", Color3.fromRGB(255, 100, 100))
+local noClipBtn = createStyledButton(settingsContainer, col2, row3, "🌊 NO CLIP OFF", Color3.fromRGB(255, 100, 100))
+
+local espBtn = createStyledButton(settingsContainer, col1, row4, "👁️ ESP OFF", Color3.fromRGB(255, 100, 100))
+local resetBtn = createStyledButton(settingsContainer, col2, row4, "💀 FORCE RESET", Color3.fromRGB(255, 100, 100))
+
+local angle = 0
+
+local function updatePositionList()
+    for _, child in ipairs(positionListScrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local positions = {"Sau lưng", "Trước mặt", "Trên đầu", "Dưới chân", "Normal"}
+    for _, pos in ipairs(positions) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -12, 0, 45)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        btn.BackgroundTransparency = 0.1
+        btn.BorderSizePixel = 2
+        btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        btn.Text = pos
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 13
+        btn.Parent = positionListScrolling
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 8)
+        btnCorner.Parent = btn
+        
+        local btnStroke = Instance.new("UIStroke")
+        btnStroke.Color = Color3.fromRGB(128, 0, 255)
+        btnStroke.Thickness = 1
+        btnStroke.Transparency = 0.5
+        btnStroke.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            currentPosition = pos
+            positionButton.Text = "📍 VỊ TRÍ: " .. pos
+            positionListFrame.Visible = false
+            
+            if pos == "Normal" then
+                speedBox.Visible = true
+            else
+                speedBox.Visible = false
+            end
+            modeStatusLabel.Text = string.format("⚙️ %s | 📍 %s", currentMethod, currentPosition)
+        end)
+    end
+    
+    positionListScrolling.CanvasSize = UDim2.new(0, 0, 0, positionListLayout.AbsoluteContentSize.Y + 10)
+end
+
+local function updateMethodList()
+    for _, child in ipairs(methodListScrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local methods = {"CFrame", "Lerp", "BodyVelocity"}
+    for _, method in ipairs(methods) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -12, 0, 45)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        btn.BackgroundTransparency = 0.1
+        btn.BorderSizePixel = 2
+        btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        btn.Text = method
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 13
+        btn.Parent = methodListScrolling
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 8)
+        btnCorner.Parent = btn
+        
+        local btnStroke = Instance.new("UIStroke")
+        btnStroke.Color = Color3.fromRGB(128, 0, 255)
+        btnStroke.Thickness = 1
+        btnStroke.Transparency = 0.5
+        btnStroke.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            currentMethod = method
+            methodButton.Text = "⚙️ CHẾ ĐỘ: " .. method
+            methodListFrame.Visible = false
+            modeStatusLabel.Text = string.format("⚙️ %s | 📍 %s", currentMethod, currentPosition)
+        end)
+    end
+    
+    methodListScrolling.CanvasSize = UDim2.new(0, 0, 0, methodListLayout.AbsoluteContentSize.Y + 10)
+end
 
 local function updatePlayerList()
     for _, child in ipairs(playerListScrolling:GetChildren()) do
@@ -376,6 +480,7 @@ local function updatePlayerList()
                 targetPlayer = plr
                 playerStatusLabel.Text = "👤 " .. plr.Name
                 playerListFrame.Visible = false
+                updateStatusLabel()
             end)
         end
     end
@@ -397,48 +502,223 @@ local function updatePlayerList()
     playerListScrolling.CanvasSize = UDim2.new(0, 0, 0, playerListLayout.AbsoluteContentSize.Y + 10)
 end
 
-local function updateModeList()
-    for _, child in ipairs(modeListScrolling:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
+local function createESP(plr)
+    if not espEnabled then return end
+    if plr == player then return end
+    if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
     
-    local modes = {"Sau lưng", "Trước mặt", "Trên đầu", "Dưới chân"}
-    for _, mode in ipairs(modes) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -12, 0, 45)
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-        btn.BackgroundTransparency = 0.1
-        btn.BorderSizePixel = 2
-        btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
-        btn.Text = mode
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 13
-        btn.Parent = modeListScrolling
-        
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 8)
-        btnCorner.Parent = btn
-        
-        local btnStroke = Instance.new("UIStroke")
-        btnStroke.Color = Color3.fromRGB(128, 0, 255)
-        btnStroke.Thickness = 1
-        btnStroke.Transparency = 0.5
-        btnStroke.Parent = btn
-        
-        btn.MouseButton1Click:Connect(function()
-            currentMode = mode
-            modeStatusLabel.Text = "⚙️ " .. mode
-            modeListFrame.Visible = false
-        end)
-    end
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP_" .. plr.Name
+    billboard.Adornee = plr.Character.Head
+    billboard.Size = UDim2.new(0, 150, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = screenGui
     
-    modeListScrolling.CanvasSize = UDim2.new(0, 0, 0, modeListLayout.AbsoluteContentSize.Y + 10)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    frame.BackgroundTransparency = 0.4
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    frame.Parent = billboard
+    
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 6)
+    frameCorner.Parent = frame
+    
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = plr.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 12
+    nameLabel.TextScaled = true
+    nameLabel.Parent = frame
+    
+    local hpLabel = Instance.new("TextLabel")
+    hpLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    hpLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    hpLabel.BackgroundTransparency = 1
+    hpLabel.Text = "❤️ 100%"
+    hpLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+    hpLabel.Font = Enum.Font.Gotham
+    hpLabel.TextSize = 10
+    hpLabel.TextScaled = true
+    hpLabel.Parent = frame
+    
+    espConnections[plr] = {
+        billboard = billboard,
+        hpLabel = hpLabel,
+        nameLabel = nameLabel
+    }
+    
+    local humanoid = plr.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        local function updateHP()
+            if not espConnections[plr] then return end
+            local hp = humanoid.Health
+            local maxHp = humanoid.MaxHealth
+            local percent = math.floor((hp / maxHp) * 100)
+            local color = percent > 50 and Color3.fromRGB(100, 255, 100) or (percent > 25 and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(255, 0, 0))
+            espConnections[plr].hpLabel.Text = "❤️ " .. percent .. "%"
+            espConnections[plr].hpLabel.TextColor3 = color
+        end
+        humanoid:GetPropertyChangedSignal("Health"):Connect(updateHP)
+        updateHP()
+    end
 end
 
-local function orbitCharacter()
-    if not orbiting then return end
-    if not targetPlayer then return end
+local function removeESP(plr)
+    if espConnections[plr] then
+        espConnections[plr].billboard:Destroy()
+        espConnections[plr] = nil
+    end
+end
+
+local function toggleESP()
+    espEnabled = not espEnabled
+    
+    if espEnabled then
+        for _, plr in ipairs(game.Players:GetPlayers()) do
+            if plr ~= player then
+                createESP(plr)
+            end
+        end
+        espBtn.Text = "👁️ ESP ON"
+        espBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+        espBtn.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        for _, plr in ipairs(game.Players:GetPlayers()) do
+            removeESP(plr)
+        end
+        espBtn.Text = "👁️ ESP OFF"
+        espBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+        espBtn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    end
+end
+
+local function updateStatusLabel()
+    if not targetPlayer then
+        playerStatusLabel.Text = "👤 Chưa chọn người chơi"
+        return
+    end
+    
+    local char = targetPlayer.Character
+    if not char then
+        playerStatusLabel.Text = "👤 " .. targetPlayer.Name .. " (không trong game)"
+        return
+    end
+    
+    local humanoid = char:FindFirstChild("Humanoid")
+    if not humanoid then
+        playerStatusLabel.Text = "👤 " .. targetPlayer.Name
+        return
+    end
+    
+    local hp = math.floor(humanoid.Health)
+    local maxHp = humanoid.MaxHealth
+    local hpPercent = math.floor((hp / maxHp) * 100)
+    
+    local myChar = player.Character
+    local distance = "???"
+    if myChar and myChar:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("HumanoidRootPart") then
+        local dist = (myChar.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+        distance = math.floor(dist) .. "s"
+    end
+    
+    local healthIcon = hpPercent > 50 and "❤️" or (hpPercent > 25 and "🧡" or "💔")
+    playerStatusLabel.Text = string.format("👤 %s | %s %d/%d (%d%%) | 📏 %s", 
+        targetPlayer.Name, healthIcon, hp, maxHp, hpPercent, distance)
+end
+
+local function toggleNoClip()
+    noClip = not noClip
+    
+    if noClip then
+        if noclipConnection then noclipConnection:Disconnect() end
+        noclipConnection = runService.Stepped:Connect(function()
+            local char = player.Character
+            if char then
+                for _, part in ipairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+        noClipBtn.Text = "🌊 NO CLIP ON"
+        noClipBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+        noClipBtn.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        if noclipConnection then noclipConnection:Disconnect() end
+        local char = player.Character
+        if char then
+            for _, part in ipairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+        noClipBtn.Text = "🌊 NO CLIP OFF"
+        noClipBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+        noClipBtn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    end
+end
+
+local function toggleInfJump()
+    infJump = not infJump
+    
+    if infJump then
+        if infJumpConnection then infJumpConnection:Disconnect() end
+        infJumpConnection = userInputService.JumpRequest:Connect(function()
+            local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+            if humanoid and humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
+        infJumpBtn.Text = "🔁 INF JUMP ON"
+        infJumpBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+        infJumpBtn.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        if infJumpConnection then infJumpConnection:Disconnect() end
+        infJumpBtn.Text = "🔁 INF JUMP OFF"
+        infJumpBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+        infJumpBtn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    end
+end
+
+local function forceReset()
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.Health = 0
+    end
+end
+
+local function getPositionOffset()
+    local distance = tonumber(distanceBox.Text) or 3
+    
+    if currentPosition == "Sau lưng" then
+        return Vector3.new(0, 0, -distance)
+    elseif currentPosition == "Trước mặt" then
+        return Vector3.new(0, 0, distance)
+    elseif currentPosition == "Trên đầu" then
+        return Vector3.new(0, distance, 0)
+    elseif currentPosition == "Dưới chân" then
+        return Vector3.new(0, -distance, 0)
+    else
+        local speed = tonumber(speedBox.Text) or 16
+        angle = angle + (speed / 100)
+        local radius = distance
+        local x = math.cos(angle) * radius        local z = math.sin(angle) * radius
+        return Vector3.new(x, 0, z)
+    end
+end
+
+local function orbitWithCFrame()
+    if not orbiting or not targetPlayer then return end
     if not targetPlayer.Character then return end
     
     local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -452,32 +732,111 @@ local function orbitCharacter()
     
     local humanoid = myChar:FindFirstChild("Humanoid")
     if humanoid then
-        humanoid.AutoRotate = false  -- Tắt tự xoay để dùng CFrame
+        humanoid.AutoRotate = false
     end
     
-    local distance = tonumber(distanceBox.Text) or 3
-    local targetPos = targetRoot.Position
-    local targetCFrame = targetRoot.CFrame
+    local offset = getPositionOffset()
+    local targetPos = targetRoot.Position + (targetRoot.CFrame:VectorToWorldSpace(offset))
+    local newCFrame = CFrame.new(targetPos, targetRoot.Position)
+    myRoot.CFrame = newCFrame
+end
+
+local function orbitWithLerp()
+    if not orbiting or not targetPlayer then return end
+    if not targetPlayer.Character then return end
     
-    if currentMode == "Sau lưng" then
-        targetPos = targetRoot.Position - targetRoot.CFrame.LookVector * distance
-    elseif currentMode == "Trước mặt" then
-        targetPos = targetRoot.Position + targetRoot.CFrame.LookVector * distance
-    elseif currentMode == "Trên đầu" then
-        targetPos = targetRoot.Position + Vector3.new(0, distance, 0)
-    elseif currentMode == "Dưới chân" then
-        targetPos = targetRoot.Position - Vector3.new(0, distance, 0)
+    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
+    
+    local myChar = player.Character
+    if not myChar then return end
+    
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+    
+    local humanoid = myChar:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.AutoRotate = false
     end
     
+    local offset = getPositionOffset()
+    local targetPos = targetRoot.Position + (targetRoot.CFrame:VectorToWorldSpace(offset))
     local newCFrame = CFrame.new(targetPos, targetRoot.Position)
     
-    if lastPosition and (lastPosition - targetPos).Magnitude > 0.5 then
-        myRoot.CFrame = newCFrame
-    else
-        myRoot.CFrame = newCFrame
+    local currentCF = myRoot.CFrame
+    myRoot.CFrame = currentCF:Lerp(newCFrame, 0.3)
+end
+
+local function orbitWithBodyVelocity()
+    if not orbiting or not targetPlayer then return end
+    if not targetPlayer.Character then return end
+    
+    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
+    
+    local myChar = player.Character
+    if not myChar then return end
+    
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+    
+    local humanoid = myChar:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.AutoRotate = false
     end
     
-    lastPosition = targetPos
+    local offset = getPositionOffset()
+    local targetPos = targetRoot.Position + (targetRoot.CFrame:VectorToWorldSpace(offset))
+    
+    local bodyVelocity = myRoot:FindFirstChild("OrbitBodyVelocity")
+    if not bodyVelocity then
+        bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "OrbitBodyVelocity"
+        bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bodyVelocity.P = 100000
+        bodyVelocity.Parent = myRoot
+    end
+    
+    bodyVelocity.Velocity = (targetPos - myRoot.Position) * 10
+    
+    local lookCFrame = CFrame.new(myRoot.Position, targetRoot.Position)
+    myRoot.CFrame = lookCFrame
+end
+
+local function stopBodyVelocity()
+    local myChar = player.Character
+    if myChar then
+        local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            local bodyVelocity = myRoot:FindFirstChild("OrbitBodyVelocity")
+            if bodyVelocity then
+                bodyVelocity:Destroy()
+            end
+        end
+    end
+end
+
+local function orbitCharacter()
+    if not orbiting then return end
+    if not targetPlayer then return end
+    
+    if currentMethod == "CFrame" then
+        orbitWithCFrame()
+    elseif currentMethod == "Lerp" then
+        orbitWithLerp()
+    elseif currentMethod == "BodyVelocity" then
+        orbitWithBodyVelocity()
+    end
+end
+
+local function resizeUIForTab()
+    local targetHeight
+    if currentTab == "orbit" then
+        targetHeight = orbitHeight
+    else
+        targetHeight = settingsHeight
+    end
+    mainFrame:TweenSize(UDim2.new(0, 320, 0, targetHeight), "Out", "Quad", 0.15)
 end
 
 local dragStart, dragStartPos, dragging = false
@@ -503,6 +862,23 @@ userInputService.InputEnded:Connect(function(input)
     end
 end)
 
+tabButton.MouseButton1Click:Connect(function()
+    if currentTab == "orbit" then
+        currentTab = "settings"
+        orbitTab.Visible = false
+        settingsTab.Visible = true
+        titleLabel.Text = "⚙️ SETTINGS ⚙️"
+        tabButton.Text = "◀"
+    else
+        currentTab = "orbit"
+        orbitTab.Visible = true
+        settingsTab.Visible = false
+        titleLabel.Text = "⚡ ORBIT CONTROLLER ⚡"
+        tabButton.Text = "⋯"
+    end
+    resizeUIForTab()
+end)
+
 playerListButton.MouseButton1Click:Connect(function()
     updatePlayerList()
     playerListFrame.Visible = true
@@ -513,14 +889,24 @@ closePlayerBtn.MouseButton1Click:Connect(function()
     playerListFrame.Visible = false
 end)
 
-modeListButton.MouseButton1Click:Connect(function()
-    updateModeList()
-    modeListFrame.Visible = true
-    modeListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
+positionButton.MouseButton1Click:Connect(function()
+    updatePositionList()
+    positionListFrame.Visible = true
+    positionListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
 end)
 
-closeModeBtn.MouseButton1Click:Connect(function()
-    modeListFrame.Visible = false
+closePositionBtn.MouseButton1Click:Connect(function()
+    positionListFrame.Visible = false
+end)
+
+methodButton.MouseButton1Click:Connect(function()
+    updateMethodList()
+    methodListFrame.Visible = true
+    methodListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X + 15, 0, mainFrame.AbsolutePosition.Y)
+end)
+
+closeMethodBtn.MouseButton1Click:Connect(function()
+    methodListFrame.Visible = false
 end)
 
 orbitButton.MouseButton1Click:Connect(function()
@@ -544,9 +930,37 @@ orbitButton.MouseButton1Click:Connect(function()
         if humanoid then
             humanoid.AutoRotate = true
         end
+        stopBodyVelocity()
         lastPosition = nil
     end
 end)
+
+speedBtn.MouseButton1Click:Connect(function()
+    local newSpeed = tonumber(speedInput.Text)
+    if newSpeed and newSpeed >= 16 and newSpeed <= 200 then
+        walkSpeed = newSpeed
+        local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = walkSpeed
+        end
+    end
+end)
+
+jumpBtn.MouseButton1Click:Connect(function()
+    local newJump = tonumber(jumpInput.Text)
+    if newJump and newJump >= 50 and newJump <= 300 then
+        jumpPower = newJump
+        local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.JumpPower = jumpPower
+        end
+    end
+end)
+
+infJumpBtn.MouseButton1Click:Connect(toggleInfJump)
+noClipBtn.MouseButton1Click:Connect(toggleNoClip)
+espBtn.MouseButton1Click:Connect(toggleESP)
+resetBtn.MouseButton1Click:Connect(forceReset)
 
 minimizeButton.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
@@ -555,7 +969,8 @@ minimizeButton.MouseButton1Click:Connect(function()
         contentContainer.Visible = false
         minimizeButton.Text = "+"
     else
-        mainFrame:TweenSize(UDim2.new(0, 320, 0, 280), "Out", "Quad", 0.2)
+        local targetHeight = currentTab == "orbit" and orbitHeight or settingsHeight
+        mainFrame:TweenSize(UDim2.new(0, 320, 0, targetHeight), "Out", "Quad", 0.2)
         contentContainer.Visible = true
         minimizeButton.Text = "–"
     end
@@ -565,6 +980,12 @@ closeButton.MouseButton1Click:Connect(function()
     local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
     if humanoid then
         humanoid.AutoRotate = true
+    end
+    if noclipConnection then noclipConnection:Disconnect() end
+    if infJumpConnection then infJumpConnection:Disconnect() end
+    stopBodyVelocity()
+    for _, data in pairs(espConnections) do
+        if data.billboard then data.billboard:Destroy() end
     end
     screenGui:Destroy()
 end)
@@ -576,9 +997,24 @@ runService.RenderStepped:Connect(function()
     if playerListFrame.Visible then
         playerListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X + 15, 0, mainFrame.AbsolutePosition.Y)
     end
-    if modeListFrame.Visible then
-        modeListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
+    if positionListFrame.Visible then
+        positionListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
     end
+    if methodListFrame.Visible then
+        methodListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X + 15, 0, mainFrame.AbsolutePosition.Y)
+    end
+    updateStatusLabel()
+end)
+
+game.Players.PlayerAdded:Connect(function(plr)
+    if espEnabled and plr ~= player then
+        wait(0.5)
+        createESP(plr)
+    end
+end)
+
+game.Players.PlayerRemoving:Connect(function(plr)
+    removeESP(plr)
 end)
 
 player.CharacterAdded:Connect(function(char)
@@ -588,5 +1024,10 @@ player.CharacterAdded:Connect(function(char)
         if humanoid then
             humanoid.AutoRotate = false
         end
+    end
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = walkSpeed
+        humanoid.JumpPower = jumpPower
     end
 end)
