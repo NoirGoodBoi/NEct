@@ -1,4 +1,5 @@
 --[[
+    Orbit Script
     by Noir
 ]]
 
@@ -8,6 +9,7 @@ local player = game.Players.LocalPlayer
 local runService = game:GetService("RunService")
 local tweenService = game:GetService("TweenService")
 local userInputService = game:GetService("UserInputService")
+local camera = workspace.CurrentCamera
 
 local orbiting = false
 local targetPlayer = nil
@@ -18,6 +20,11 @@ local isMinimized = false
 local currentTab = "orbit"
 local orbitSpeed = 16
 
+local isSpectating = false
+local spectateTarget = nil
+local spectateIndex = 1
+local spectatePlayerList = {}
+
 local walkSpeed = 16
 local jumpPower = 50
 local infJump = false
@@ -26,6 +33,10 @@ local espEnabled = false
 local noclipConnection = nil
 local infJumpConnection = nil
 local espConnections = {}
+
+local dragging = false
+local dragStart = nil
+local startPos = nil
 
 local btnWidth = 140
 local btnHeight = 40
@@ -38,7 +49,7 @@ local row4 = 165
 local row5 = 215
 
 local orbitHeight = 280 
-local settingsHeight = 230 
+local settingsHeight = 280
 local minHeight = 280
 
 local screenGui = Instance.new("ScreenGui")
@@ -46,6 +57,100 @@ screenGui.Name = "OrbitGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = player.PlayerGui
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local specGui = Instance.new("ScreenGui")
+specGui.Name = "NoirSpectate"
+specGui.ResetOnSpawn = false
+specGui.Enabled = false
+specGui.Parent = player.PlayerGui
+
+local specFrame = Instance.new("Frame")
+specFrame.Size = UDim2.new(0, 260, 0, 120)
+specFrame.Position = UDim2.new(1, -275, 0.3, 0)
+specFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+specFrame.BackgroundTransparency = 0.05
+specFrame.BorderSizePixel = 2
+specFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
+specFrame.Parent = specGui
+
+local specCorner = Instance.new("UICorner")
+specCorner.CornerRadius = UDim.new(0, 12)
+specCorner.Parent = specFrame
+
+local specStroke = Instance.new("UIStroke")
+specStroke.Color = Color3.fromRGB(128, 0, 255)
+specStroke.Thickness = 2
+specStroke.Transparency = 0.2
+specStroke.Parent = specFrame
+
+local specAvatar = Instance.new("ImageLabel")
+specAvatar.Size = UDim2.new(0, 50, 0, 50)
+specAvatar.Position = UDim2.new(0, 10, 0, 10)
+specAvatar.BackgroundTransparency = 1
+specAvatar.Parent = specFrame
+
+local specAvatarCorner = Instance.new("UICorner")
+specAvatarCorner.CornerRadius = UDim.new(1, 0)
+specAvatarCorner.Parent = specAvatar
+
+local specInfo = Instance.new("TextLabel")
+specInfo.Size = UDim2.new(1, -70, 1, -20)
+specInfo.Position = UDim2.new(0, 70, 0, 10)
+specInfo.BackgroundTransparency = 1
+specInfo.TextScaled = true
+specInfo.TextXAlignment = Enum.TextXAlignment.Left
+specInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+specInfo.Font = Enum.Font.Gotham
+specInfo.TextSize = 12
+specInfo.Parent = specFrame
+
+local btnLeft = Instance.new("TextButton")
+btnLeft.Size = UDim2.new(0, 25, 0, 25)
+btnLeft.Position = UDim2.new(0, 10, 1, -30)
+btnLeft.Text = "<"
+btnLeft.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+btnLeft.BorderSizePixel = 2
+btnLeft.BorderColor3 = Color3.fromRGB(128, 0, 255)
+btnLeft.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnLeft.Font = Enum.Font.GothamBold
+btnLeft.TextSize = 16
+btnLeft.Parent = specFrame
+
+local btnLeftCorner = Instance.new("UICorner")
+btnLeftCorner.CornerRadius = UDim.new(1, 0)
+btnLeftCorner.Parent = btnLeft
+
+local btnRight = Instance.new("TextButton")
+btnRight.Size = UDim2.new(0, 25, 0, 25)
+btnRight.Position = UDim2.new(0, 40, 1, -30)
+btnRight.Text = ">"
+btnRight.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+btnRight.BorderSizePixel = 2
+btnRight.BorderColor3 = Color3.fromRGB(128, 0, 255)
+btnRight.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnRight.Font = Enum.Font.GothamBold
+btnRight.TextSize = 16
+btnRight.Parent = specFrame
+
+local btnRightCorner = Instance.new("UICorner")
+btnRightCorner.CornerRadius = UDim.new(1, 0)
+btnRightCorner.Parent = btnRight
+
+local btnStopSpec = Instance.new("TextButton")
+btnStopSpec.Size = UDim2.new(0, 50, 0, 25)
+btnStopSpec.Position = UDim2.new(1, -60, 1, -30)
+btnStopSpec.Text = "✕"
+btnStopSpec.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+btnStopSpec.BorderSizePixel = 2
+btnStopSpec.BorderColor3 = Color3.fromRGB(255, 100, 100)
+btnStopSpec.TextColor3 = Color3.fromRGB(255, 100, 100)
+btnStopSpec.Font = Enum.Font.GothamBold
+btnStopSpec.TextSize = 14
+btnStopSpec.Parent = specFrame
+
+local btnStopCorner = Instance.new("UICorner")
+btnStopCorner.CornerRadius = UDim.new(0, 6)
+btnStopCorner.Parent = btnStopSpec
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 320, 0, orbitHeight)
@@ -56,7 +161,6 @@ mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
 mainFrame.Active = true
 mainFrame.Draggable = false
-mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 
 local mainCorner = Instance.new("UICorner")
@@ -87,6 +191,39 @@ headerStroke.Color = Color3.fromRGB(128, 0, 255)
 headerStroke.Thickness = 1.5
 headerStroke.Transparency = 0.3
 headerStroke.Parent = header
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+userInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        if startPos then
+            mainFrame.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+
+userInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -120, 1, 0)
@@ -238,6 +375,7 @@ end
 local playerListFrame, playerListScrolling, playerListLayout, closePlayerBtn = createSidePanel("PlayerList", "📋 DANH SÁCH NGƯỜI CHƠI", 320, 280)
 local positionListFrame, positionListScrolling, positionListLayout, closePositionBtn = createSidePanel("PositionList", "📍 CHỌN VỊ TRÍ", 250, 280)
 local methodListFrame, methodListScrolling, methodListLayout, closeMethodBtn = createSidePanel("MethodList", "⚙️ CHỌN CHẾ ĐỘ ORBIT", 250, 200)
+local spectateListFrame, spectateListScrolling, spectateListLayout, closeSpectateBtn = createSidePanel("SpectateList", "👁️ CHỌN NGƯỜI CHƠI ĐỂ SPECTATE", 320, 280)
 
 local function createStyledButton(parent, posX, posY, text, color)
     local btn = Instance.new("TextButton")
@@ -296,19 +434,16 @@ end
 
 local playerListButton = createStyledButton(orbitContainer, col1, row1, "👥 DANH SÁCH")
 local positionButton = createStyledButton(orbitContainer, col2, row1, "📍 VỊ TRÍ: Normal")
-
 local distanceBox = createStyledInput(orbitContainer, col1, row2, "Khoảng cách", "3")
-
 local orbitButton = createStyledButton(orbitContainer, col2, row2, "🔴 ORBIT OFF", Color3.fromRGB(255, 100, 100))
-
 local methodButton = createStyledButton(orbitContainer, col1, row3, "⚙️ CHẾ ĐỘ: CFrame")
-
-local speedBox = createStyledInput(orbitContainer, col2, row3, "Speed Orbit", "16")
+local spectateButton = createStyledButton(orbitContainer, col2, row3, "👁️ SPECTATE", Color3.fromRGB(100, 100, 255))
+local speedBox = createStyledInput(orbitContainer, col1, row4, "Speed Orbit", "16")
 speedBox.Visible = false
 
 local playerStatusLabel = Instance.new("TextLabel")
 playerStatusLabel.Size = UDim2.new(0, 290, 0, 32)
-playerStatusLabel.Position = UDim2.new(0, 15, 0, row4 + 5)
+playerStatusLabel.Position = UDim2.new(0, 15, 0, row5 + 5)
 playerStatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 playerStatusLabel.BackgroundTransparency = 0.2
 playerStatusLabel.BorderSizePixel = 2
@@ -326,7 +461,7 @@ playerStatusCorner.Parent = playerStatusLabel
 
 local modeStatusLabel = Instance.new("TextLabel")
 modeStatusLabel.Size = UDim2.new(0, 290, 0, 32)
-modeStatusLabel.Position = UDim2.new(0, 15, 0, row5 + 5)
+modeStatusLabel.Position = UDim2.new(0, 15, 0, row5 + 42)
 modeStatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 modeStatusLabel.BackgroundTransparency = 0.2
 modeStatusLabel.BorderSizePixel = 2
@@ -355,6 +490,121 @@ local noClipBtn = createStyledButton(settingsContainer, col2, row3, "🌊 NO CLI
 
 local espBtn = createStyledButton(settingsContainer, col1, row4, "👁️ ESP OFF", Color3.fromRGB(255, 100, 100))
 local resetBtn = createStyledButton(settingsContainer, col2, row4, "💀 FORCE RESET", Color3.fromRGB(255, 100, 100))
+
+local flyBtn = createStyledButton(settingsContainer, col1, row5, "🕊️ LOAD FLY", Color3.fromRGB(100, 255, 100))
+flyBtn.Size = UDim2.new(0, 290, 0, btnHeight)
+
+local function loadFly()
+    local flyScript = loadstring(game:HttpGet("https://raw.githubusercontent.com/NoirGoodBoi/NoirGui/refs/heads/main/Noir_Fly"))
+    if flyScript then
+        flyScript()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "FLY V3";
+            Text = "Đã tải script Fly!";
+            Duration = 2;
+        })
+    end
+end
+
+flyBtn.MouseButton1Click:Connect(loadFly)
+
+local function updateSpectateList()
+    for _, child in ipairs(spectateListScrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    spectatePlayerList = {}
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr ~= player then
+            table.insert(spectatePlayerList, plr)
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -12, 0, 40)
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+            btn.BackgroundTransparency = 0.1
+            btn.BorderSizePixel = 2
+            btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+            btn.Text = plr.Name
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 12
+            btn.Parent = spectateListScrolling
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 8)
+            btnCorner.Parent = btn
+            
+            local btnStroke = Instance.new("UIStroke")
+            btnStroke.Color = Color3.fromRGB(128, 0, 255)
+            btnStroke.Thickness = 1
+            btnStroke.Transparency = 0.5
+            btnStroke.Parent = btn
+            
+            btn.MouseButton1Click:Connect(function()
+                spectateTarget = plr
+                spectateListFrame.Visible = false
+                
+                if not isSpectating then
+                    isSpectating = true
+                    specGui.Enabled = true
+                    if player.Character and player.Character:FindFirstChild("Humanoid") then
+                        camera.CameraSubject = player.Character.Humanoid
+                    end
+                end
+            end)
+        end
+    end
+    
+    if #spectatePlayerList == 0 then
+        local emptyLabel = Instance.new("TextLabel")
+        emptyLabel.Size = UDim2.new(1, -12, 0, 40)
+        emptyLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        emptyLabel.BackgroundTransparency = 0.1
+        emptyLabel.BorderSizePixel = 2
+        emptyLabel.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        emptyLabel.Text = "Không có người chơi khác"
+        emptyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.TextSize = 12
+        emptyLabel.Parent = spectateListScrolling
+    end
+    
+    spectateListScrolling.CanvasSize = UDim2.new(0, 0, 0, spectateListLayout.AbsoluteContentSize.Y + 10)
+end
+
+local function stopSpectate()
+    isSpectating = false
+    specGui.Enabled = false
+    spectateTarget = nil
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        camera.CameraSubject = player.Character.Humanoid
+    end
+end
+
+local function nextSpectate()
+    if #spectatePlayerList == 0 then return end
+    local currentIndex = 1
+    for i, plr in ipairs(spectatePlayerList) do
+        if plr == spectateTarget then
+            currentIndex = i
+            break
+        end
+    end
+    local nextIndex = currentIndex % #spectatePlayerList + 1
+    spectateTarget = spectatePlayerList[nextIndex]
+end
+
+local function prevSpectate()
+    if #spectatePlayerList == 0 then return end
+    local currentIndex = 1
+    for i, plr in ipairs(spectatePlayerList) do
+        if plr == spectateTarget then
+            currentIndex = i
+            break
+        end
+    end
+    local prevIndex = (currentIndex - 2 + #spectatePlayerList) % #spectatePlayerList + 1
+    spectateTarget = spectatePlayerList[prevIndex]
+end
 
 local angle = 0
 
@@ -711,7 +961,8 @@ local function getPositionOffset()
         local speed = tonumber(speedBox.Text) or 16
         angle = angle + (speed / 100)
         local radius = distance
-        local x = math.cos(angle) * radius        local z = math.sin(angle) * radius
+        local x = math.cos(angle) * radius
+        local z = math.sin(angle) * radius
         return Vector3.new(x, 0, z)
     end
 end
@@ -838,35 +1089,12 @@ local function resizeUIForTab()
     mainFrame:TweenSize(UDim2.new(0, 320, 0, targetHeight), "Out", "Quad", 0.15)
 end
 
-local dragStart, dragStartPos, dragging = false
-
-header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        dragStartPos = mainFrame.Position
-    end
-end)
-
-userInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(0, dragStartPos.X.Offset + delta.X, 0, dragStartPos.Y.Offset + delta.Y)
-    end
-end)
-
-userInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
 tabButton.MouseButton1Click:Connect(function()
     if currentTab == "orbit" then
         currentTab = "settings"
         orbitTab.Visible = false
         settingsTab.Visible = true
-        titleLabel.Text = "⚙️ UTILITIES ⚙️"
+        titleLabel.Text = "🛠️ UTILITIES 🛠️"
         tabButton.Text = "◀"
     else
         currentTab = "orbit"
@@ -908,6 +1136,16 @@ closeMethodBtn.MouseButton1Click:Connect(function()
     methodListFrame.Visible = false
 end)
 
+spectateButton.MouseButton1Click:Connect(function()
+    updateSpectateList()
+    spectateListFrame.Visible = true
+    spectateListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
+end)
+
+closeSpectateBtn.MouseButton1Click:Connect(function()
+    spectateListFrame.Visible = false
+end)
+
 orbitButton.MouseButton1Click:Connect(function()
     orbiting = not orbiting
     
@@ -933,6 +1171,10 @@ orbitButton.MouseButton1Click:Connect(function()
         lastPosition = nil
     end
 end)
+
+btnLeft.MouseButton1Click:Connect(prevSpectate)
+btnRight.MouseButton1Click:Connect(nextSpectate)
+btnStopSpec.MouseButton1Click:Connect(stopSpectate)
 
 speedBtn.MouseButton1Click:Connect(function()
     local newSpeed = tonumber(speedInput.Text)
@@ -983,16 +1225,19 @@ closeButton.MouseButton1Click:Connect(function()
     if noclipConnection then noclipConnection:Disconnect() end
     if infJumpConnection then infJumpConnection:Disconnect() end
     stopBodyVelocity()
+    stopSpectate()
     for _, data in pairs(espConnections) do
         if data.billboard then data.billboard:Destroy() end
     end
     screenGui:Destroy()
+    specGui:Destroy()
 end)
 
 runService.RenderStepped:Connect(function()
     if orbiting then
         orbitCharacter()
     end
+    
     if playerListFrame.Visible then
         playerListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X + 15, 0, mainFrame.AbsolutePosition.Y)
     end
@@ -1002,7 +1247,34 @@ runService.RenderStepped:Connect(function()
     if methodListFrame.Visible then
         methodListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X + 15, 0, mainFrame.AbsolutePosition.Y)
     end
+    if spectateListFrame.Visible then
+        spectateListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
+    end
+    
     updateStatusLabel()
+    
+    if isSpectating and spectateTarget then
+        local targetChar = spectateTarget.Character
+        local targetHRP = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+        local targetHumanoid = targetChar and targetChar:FindFirstChild("Humanoid")
+        
+        if targetHRP and targetHumanoid then
+            camera.CameraSubject = targetHumanoid
+            
+            local myHRP = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+            local dist = myHRP and math.floor((myHRP.Position - targetHRP.Position).Magnitude) or 0
+            local vel = targetHRP.Velocity
+            local spd = math.floor(Vector3.new(vel.X, 0, vel.Z).Magnitude)
+            local state = targetHumanoid:GetState() == Enum.HumanoidStateType.Jumping and "Jumping" or "Ground"
+            
+            local avatarUrl = "https://www.roblox.com/headshot-thumbnail/image?userId="..spectateTarget.UserId.."&width=150&height=150&format=png"
+            specAvatar.Image = avatarUrl
+            specInfo.Text = spectateTarget.DisplayName.." [@"..spectateTarget.Name.."]\nDist: "..dist.."m\nSpeed: "..spd.."\nState: "..state
+        end
+    elseif specGui.Enabled then
+        specInfo.Text = ""
+        specAvatar.Image = ""
+    end
 end)
 
 game.Players.PlayerAdded:Connect(function(plr)
@@ -1010,10 +1282,19 @@ game.Players.PlayerAdded:Connect(function(plr)
         wait(0.5)
         createESP(plr)
     end
+    if spectateListFrame.Visible then
+        updateSpectateList()
+    end
 end)
 
 game.Players.PlayerRemoving:Connect(function(plr)
     removeESP(plr)
+    if spectateTarget == plr then
+        stopSpectate()
+    end
+    if spectateListFrame.Visible then
+        updateSpectateList()
+    end
 end)
 
 player.CharacterAdded:Connect(function(char)
