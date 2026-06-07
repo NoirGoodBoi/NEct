@@ -1,5 +1,4 @@
 --[[
-    Orbit Script + Var Tab
     by Noir
 ]]
 
@@ -867,7 +866,7 @@ tabButton.MouseButton1Click:Connect(function()
         currentTab = "settings"
         orbitTab.Visible = false
         settingsTab.Visible = true
-        titleLabel.Text = "⚙️ SETTINGS ⚙️"
+        titleLabel.Text = "⚙️ UTILITIES ⚙️"
         tabButton.Text = "◀"
     else
         currentTab = "orbit"
