@@ -1,1 +1,2 @@
-
+task.spawn(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/NoirGoodBoi/NEct/refs/heads/main/RL/performance"))() end)
+task.spawn(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/NoirGoodBoi/NEct/refs/heads/main/RL/lock_on"))() end)
