@@ -1,1 +1,592 @@
+--[[
+    Orbit Script
+    bypass Anti tp
+    by Noir
+]]
 
+repeat wait() until game.Players.LocalPlayer and game:IsLoaded()
+
+local player = game.Players.LocalPlayer
+local runService = game:GetService("RunService")
+local tweenService = game:GetService("TweenService")
+local userInputService = game:GetService("UserInputService")
+
+local orbiting = false
+local targetPlayer = nil
+local currentMode = "Sau lưng"
+local lastPosition = nil
+local isMinimized = false
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "OrbitGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 320, 0, 280)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+mainFrame.BackgroundTransparency = 0.05
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
+mainFrame.Active = true
+mainFrame.Draggable = false
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(128, 0, 255)
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.2
+mainStroke.Parent = mainFrame
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 35)
+header.Position = UDim2.new(0, 0, 0, 0)
+header.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+header.BackgroundTransparency = 0.1
+header.BorderSizePixel = 2
+header.BorderColor3 = Color3.fromRGB(128, 0, 255)
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 12)
+headerCorner.Parent = header
+
+local headerStroke = Instance.new("UIStroke")
+headerStroke.Color = Color3.fromRGB(128, 0, 255)
+headerStroke.Thickness = 1.5
+headerStroke.Transparency = 0.3
+headerStroke.Parent = header
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -70, 1, 0)
+titleLabel.Position = UDim2.new(0, 15, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "⚡ ORBIT CONTROLLER ⚡"
+titleLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 14
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+titleLabel.Parent = header
+
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Size = UDim2.new(0, 30, 1, 0)
+minimizeButton.Position = UDim2.new(1, -65, 0, 0)
+minimizeButton.BackgroundTransparency = 1
+minimizeButton.Text = "–"
+minimizeButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.TextSize = 20
+minimizeButton.Parent = header
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 30, 1, 0)
+closeButton.Position = UDim2.new(1, -35, 0, 0)
+closeButton.BackgroundTransparency = 1
+closeButton.Text = "×"
+closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextSize = 18
+closeButton.Parent = header
+
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, 0, 1, -35)
+contentContainer.Position = UDim2.new(0, 0, 0, 35)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = mainFrame
+
+local playerListFrame = Instance.new("Frame")
+playerListFrame.Size = UDim2.new(0, 320, 0, 280)
+playerListFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+playerListFrame.BackgroundTransparency = 0.05
+playerListFrame.BorderSizePixel = 2
+playerListFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
+playerListFrame.Visible = false
+playerListFrame.Parent = screenGui
+playerListFrame.ClipsDescendants = true
+
+local playerListCorner = Instance.new("UICorner")
+playerListCorner.CornerRadius = UDim.new(0, 12)
+playerListCorner.Parent = playerListFrame
+
+local playerListStroke = Instance.new("UIStroke")
+playerListStroke.Color = Color3.fromRGB(128, 0, 255)
+playerListStroke.Thickness = 2
+playerListStroke.Transparency = 0.2
+playerListStroke.Parent = playerListFrame
+
+local playerListHeader = Instance.new("Frame")
+playerListHeader.Size = UDim2.new(1, 0, 0, 35)
+playerListHeader.Position = UDim2.new(0, 0, 0, 0)
+playerListHeader.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+playerListHeader.BackgroundTransparency = 0.1
+playerListHeader.BorderSizePixel = 2
+playerListHeader.BorderColor3 = Color3.fromRGB(128, 0, 255)
+playerListHeader.Parent = playerListFrame
+
+local playerListHeaderCorner = Instance.new("UICorner")
+playerListHeaderCorner.CornerRadius = UDim.new(0, 12)
+playerListHeaderCorner.Parent = playerListHeader
+
+local playerListTitle = Instance.new("TextLabel")
+playerListTitle.Size = UDim2.new(1, -20, 1, 0)
+playerListTitle.Position = UDim2.new(0, 10, 0, 0)
+playerListTitle.BackgroundTransparency = 1
+playerListTitle.Text = "📋 DANH SÁCH NGƯỜI CHƠI"
+playerListTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+playerListTitle.Font = Enum.Font.GothamBold
+playerListTitle.TextSize = 13
+playerListTitle.TextXAlignment = Enum.TextXAlignment.Left
+playerListTitle.TextYAlignment = Enum.TextYAlignment.Center
+playerListTitle.Parent = playerListHeader
+
+local closePlayerBtn = Instance.new("TextButton")
+closePlayerBtn.Size = UDim2.new(0, 30, 1, 0)
+closePlayerBtn.Position = UDim2.new(1, -35, 0, 0)
+closePlayerBtn.BackgroundTransparency = 1
+closePlayerBtn.Text = "×"
+closePlayerBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+closePlayerBtn.Font = Enum.Font.GothamBold
+closePlayerBtn.TextSize = 16
+closePlayerBtn.Parent = playerListHeader
+
+local playerListScrolling = Instance.new("ScrollingFrame")
+playerListScrolling.Size = UDim2.new(1, 0, 1, -35)
+playerListScrolling.Position = UDim2.new(0, 0, 0, 35)
+playerListScrolling.BackgroundTransparency = 1
+playerListScrolling.ScrollBarThickness = 6
+playerListScrolling.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
+playerListScrolling.Parent = playerListFrame
+
+local playerListLayout = Instance.new("UIListLayout")
+playerListLayout.Padding = UDim.new(0, 6)
+playerListLayout.SortOrder = Enum.SortOrder.Name
+playerListLayout.Parent = playerListScrolling
+
+local modeListFrame = Instance.new("Frame")
+modeListFrame.Size = UDim2.new(0, 250, 0, 250)
+modeListFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+modeListFrame.BackgroundTransparency = 0.05
+modeListFrame.BorderSizePixel = 2
+modeListFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
+modeListFrame.Visible = false
+modeListFrame.Parent = screenGui
+modeListFrame.ClipsDescendants = true
+
+local modeListCorner = Instance.new("UICorner")
+modeListCorner.CornerRadius = UDim.new(0, 12)
+modeListCorner.Parent = modeListFrame
+
+local modeListStroke = Instance.new("UIStroke")
+modeListStroke.Color = Color3.fromRGB(128, 0, 255)
+modeListStroke.Thickness = 2
+modeListStroke.Transparency = 0.2
+modeListStroke.Parent = modeListFrame
+
+local modeListHeader = Instance.new("Frame")
+modeListHeader.Size = UDim2.new(1, 0, 0, 35)
+modeListHeader.Position = UDim2.new(0, 0, 0, 0)
+modeListHeader.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+modeListHeader.BackgroundTransparency = 0.1
+modeListHeader.BorderSizePixel = 2
+modeListHeader.BorderColor3 = Color3.fromRGB(128, 0, 255)
+modeListHeader.Parent = modeListFrame
+
+local modeListHeaderCorner = Instance.new("UICorner")
+modeListHeaderCorner.CornerRadius = UDim.new(0, 12)
+modeListHeaderCorner.Parent = modeListHeader
+
+local modeListTitle = Instance.new("TextLabel")
+modeListTitle.Size = UDim2.new(1, -20, 1, 0)
+modeListTitle.Position = UDim2.new(0, 10, 0, 0)
+modeListTitle.BackgroundTransparency = 1
+modeListTitle.Text = "⚙️ CHỌN CHẾ ĐỘ"
+modeListTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+modeListTitle.Font = Enum.Font.GothamBold
+modeListTitle.TextSize = 13
+modeListTitle.TextXAlignment = Enum.TextXAlignment.Left
+modeListTitle.TextYAlignment = Enum.TextYAlignment.Center
+modeListTitle.Parent = modeListHeader
+
+local closeModeBtn = Instance.new("TextButton")
+closeModeBtn.Size = UDim2.new(0, 30, 1, 0)
+closeModeBtn.Position = UDim2.new(1, -35, 0, 0)
+closeModeBtn.BackgroundTransparency = 1
+closeModeBtn.Text = "×"
+closeModeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+closeModeBtn.Font = Enum.Font.GothamBold
+closeModeBtn.TextSize = 16
+closeModeBtn.Parent = modeListHeader
+
+local modeListScrolling = Instance.new("ScrollingFrame")
+modeListScrolling.Size = UDim2.new(1, 0, 1, -35)
+modeListScrolling.Position = UDim2.new(0, 0, 0, 35)
+modeListScrolling.BackgroundTransparency = 1
+modeListScrolling.ScrollBarThickness = 6
+modeListScrolling.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
+modeListScrolling.Parent = modeListFrame
+
+local modeListLayout = Instance.new("UIListLayout")
+modeListLayout.Padding = UDim.new(0, 6)
+modeListLayout.SortOrder = Enum.SortOrder.Name
+modeListLayout.Parent = modeListScrolling
+
+local function createStyledButton(parent, posX, posY, text, color)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 140, 0, 40)
+    btn.Position = UDim2.new(0, posX, 0, posY)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    btn.BackgroundTransparency = 0.2
+    btn.BorderSizePixel = 2
+    btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    btn.Text = text
+    btn.TextColor3 = color or Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.Parent = parent
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Color = Color3.fromRGB(128, 0, 255)
+    btnStroke.Thickness = 1.5
+    btnStroke.Transparency = 0.4
+    btnStroke.Parent = btn
+    
+    return btn
+end
+
+local playerListButton = createStyledButton(contentContainer, 15, 20, "👥 DANH SÁCH")
+local modeListButton = createStyledButton(contentContainer, 165, 20, "🎮 CHẾ ĐỘ")
+
+local distanceBox = Instance.new("TextBox")
+distanceBox.Size = UDim2.new(0, 140, 0, 40)
+distanceBox.Position = UDim2.new(0, 15, 0, 75)
+distanceBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+distanceBox.BackgroundTransparency = 0.2
+distanceBox.BorderSizePixel = 2
+distanceBox.BorderColor3 = Color3.fromRGB(128, 0, 255)
+distanceBox.Text = "3"
+distanceBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+distanceBox.Font = Enum.Font.GothamBold
+distanceBox.TextSize = 13
+distanceBox.PlaceholderText = "Khoảng cách"
+distanceBox.Parent = contentContainer
+
+local distanceCorner = Instance.new("UICorner")
+distanceCorner.CornerRadius = UDim.new(0, 8)
+distanceCorner.Parent = distanceBox
+
+local distanceStroke = Instance.new("UIStroke")
+distanceStroke.Color = Color3.fromRGB(128, 0, 255)
+distanceStroke.Thickness = 1.5
+distanceStroke.Transparency = 0.4
+distanceStroke.Parent = distanceBox
+
+local orbitButton = createStyledButton(contentContainer, 165, 75, "🔴 ORBIT OFF", Color3.fromRGB(255, 100, 100))
+
+local playerStatusLabel = Instance.new("TextLabel")
+playerStatusLabel.Size = UDim2.new(0, 290, 0, 32)
+playerStatusLabel.Position = UDim2.new(0, 15, 0, 130)
+playerStatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+playerStatusLabel.BackgroundTransparency = 0.2
+playerStatusLabel.BorderSizePixel = 2
+playerStatusLabel.BorderColor3 = Color3.fromRGB(128, 0, 255)
+playerStatusLabel.Text = "👤 Chưa chọn người chơi"
+playerStatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+playerStatusLabel.Font = Enum.Font.Gotham
+playerStatusLabel.TextSize = 12
+playerStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+playerStatusLabel.Parent = contentContainer
+
+local playerStatusCorner = Instance.new("UICorner")
+playerStatusCorner.CornerRadius = UDim.new(0, 8)
+playerStatusCorner.Parent = playerStatusLabel
+
+local playerStatusStroke = Instance.new("UIStroke")
+playerStatusStroke.Color = Color3.fromRGB(128, 0, 255)
+playerStatusStroke.Thickness = 1.5
+playerStatusStroke.Transparency = 0.4
+playerStatusStroke.Parent = playerStatusLabel
+
+local modeStatusLabel = Instance.new("TextLabel")
+modeStatusLabel.Size = UDim2.new(0, 290, 0, 32)
+modeStatusLabel.Position = UDim2.new(0, 15, 0, 175)
+modeStatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+modeStatusLabel.BackgroundTransparency = 0.2
+modeStatusLabel.BorderSizePixel = 2
+modeStatusLabel.BorderColor3 = Color3.fromRGB(128, 0, 255)
+modeStatusLabel.Text = "⚙️ Chế độ: Sau lưng"
+modeStatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+modeStatusLabel.Font = Enum.Font.Gotham
+modeStatusLabel.TextSize = 12
+modeStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+modeStatusLabel.Parent = contentContainer
+
+local modeStatusCorner = Instance.new("UICorner")
+modeStatusCorner.CornerRadius = UDim.new(0, 8)
+modeStatusCorner.Parent = modeStatusLabel
+
+local modeStatusStroke = Instance.new("UIStroke")
+modeStatusStroke.Color = Color3.fromRGB(128, 0, 255)
+modeStatusStroke.Thickness = 1.5
+modeStatusStroke.Transparency = 0.4
+modeStatusStroke.Parent = modeStatusLabel
+
+local function updatePlayerList()
+    for _, child in ipairs(playerListScrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local hasPlayers = false
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr ~= player then
+            hasPlayers = true
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -12, 0, 40)
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+            btn.BackgroundTransparency = 0.1
+            btn.BorderSizePixel = 2
+            btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+            btn.Text = plr.Name
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 12
+            btn.Parent = playerListScrolling
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 8)
+            btnCorner.Parent = btn
+            
+            local btnStroke = Instance.new("UIStroke")
+            btnStroke.Color = Color3.fromRGB(128, 0, 255)
+            btnStroke.Thickness = 1
+            btnStroke.Transparency = 0.5
+            btnStroke.Parent = btn
+            
+            btn.MouseButton1Click:Connect(function()
+                targetPlayer = plr
+                playerStatusLabel.Text = "👤 " .. plr.Name
+                playerListFrame.Visible = false
+            end)
+        end
+    end
+    
+    if not hasPlayers then
+        local emptyLabel = Instance.new("TextLabel")
+        emptyLabel.Size = UDim2.new(1, -12, 0, 40)
+        emptyLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        emptyLabel.BackgroundTransparency = 0.1
+        emptyLabel.BorderSizePixel = 2
+        emptyLabel.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        emptyLabel.Text = "Không có người chơi khác"
+        emptyLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.TextSize = 12
+        emptyLabel.Parent = playerListScrolling
+    end
+    
+    playerListScrolling.CanvasSize = UDim2.new(0, 0, 0, playerListLayout.AbsoluteContentSize.Y + 10)
+end
+
+local function updateModeList()
+    for _, child in ipairs(modeListScrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local modes = {"Sau lưng", "Trước mặt", "Trên đầu", "Dưới chân"}
+    for _, mode in ipairs(modes) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -12, 0, 45)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        btn.BackgroundTransparency = 0.1
+        btn.BorderSizePixel = 2
+        btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        btn.Text = mode
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 13
+        btn.Parent = modeListScrolling
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 8)
+        btnCorner.Parent = btn
+        
+        local btnStroke = Instance.new("UIStroke")
+        btnStroke.Color = Color3.fromRGB(128, 0, 255)
+        btnStroke.Thickness = 1
+        btnStroke.Transparency = 0.5
+        btnStroke.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            currentMode = mode
+            modeStatusLabel.Text = "⚙️ " .. mode
+            modeListFrame.Visible = false
+        end)
+    end
+    
+    modeListScrolling.CanvasSize = UDim2.new(0, 0, 0, modeListLayout.AbsoluteContentSize.Y + 10)
+end
+
+local function orbitCharacter()
+    if not orbiting then return end
+    if not targetPlayer then return end
+    if not targetPlayer.Character then return end
+    
+    local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not targetRoot then return end
+    
+    local myChar = player.Character
+    if not myChar then return end
+    
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+    
+    local humanoid = myChar:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.AutoRotate = false  -- Tắt tự xoay để dùng CFrame
+    end
+    
+    local distance = tonumber(distanceBox.Text) or 3
+    local targetPos = targetRoot.Position
+    local targetCFrame = targetRoot.CFrame
+    
+    if currentMode == "Sau lưng" then
+        targetPos = targetRoot.Position - targetRoot.CFrame.LookVector * distance
+    elseif currentMode == "Trước mặt" then
+        targetPos = targetRoot.Position + targetRoot.CFrame.LookVector * distance
+    elseif currentMode == "Trên đầu" then
+        targetPos = targetRoot.Position + Vector3.new(0, distance, 0)
+    elseif currentMode == "Dưới chân" then
+        targetPos = targetRoot.Position - Vector3.new(0, distance, 0)
+    end
+    
+    local newCFrame = CFrame.new(targetPos, targetRoot.Position)
+    
+    if lastPosition and (lastPosition - targetPos).Magnitude > 0.5 then
+        myRoot.CFrame = newCFrame
+    else
+        myRoot.CFrame = newCFrame
+    end
+    
+    lastPosition = targetPos
+end
+
+local dragStart, dragStartPos, dragging = false
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        dragStartPos = mainFrame.Position
+    end
+end)
+
+userInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(0, dragStartPos.X.Offset + delta.X, 0, dragStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+userInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+playerListButton.MouseButton1Click:Connect(function()
+    updatePlayerList()
+    playerListFrame.Visible = true
+    playerListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X + 15, 0, mainFrame.AbsolutePosition.Y)
+end)
+
+closePlayerBtn.MouseButton1Click:Connect(function()
+    playerListFrame.Visible = false
+end)
+
+modeListButton.MouseButton1Click:Connect(function()
+    updateModeList()
+    modeListFrame.Visible = true
+    modeListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
+end)
+
+closeModeBtn.MouseButton1Click:Connect(function()
+    modeListFrame.Visible = false
+end)
+
+orbitButton.MouseButton1Click:Connect(function()
+    orbiting = not orbiting
+    
+    if orbiting then
+        orbitButton.Text = "🟢 ORBIT ON"
+        orbitButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
+        orbitButton.TextColor3 = Color3.fromRGB(100, 255, 100)
+        
+        local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.AutoRotate = false
+        end
+    else
+        orbitButton.Text = "🔴 ORBIT OFF"
+        orbitButton.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        orbitButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+        
+        local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.AutoRotate = true
+        end
+        lastPosition = nil
+    end
+end)
+
+minimizeButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        mainFrame:TweenSize(UDim2.new(0, 320, 0, 35), "Out", "Quad", 0.2)
+        contentContainer.Visible = false
+        minimizeButton.Text = "+"
+    else
+        mainFrame:TweenSize(UDim2.new(0, 320, 0, 280), "Out", "Quad", 0.2)
+        contentContainer.Visible = true
+        minimizeButton.Text = "–"
+    end
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.AutoRotate = true
+    end
+    screenGui:Destroy()
+end)
+
+runService.RenderStepped:Connect(function()
+    if orbiting then
+        orbitCharacter()
+    end
+    if playerListFrame.Visible then
+        playerListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X + mainFrame.AbsoluteSize.X + 15, 0, mainFrame.AbsolutePosition.Y)
+    end
+    if modeListFrame.Visible then
+        modeListFrame.Position = UDim2.new(0, mainFrame.AbsolutePosition.X - 265, 0, mainFrame.AbsolutePosition.Y)
+    end
+end)
+
+player.CharacterAdded:Connect(function(char)
+    wait(0.5)
+    if orbiting then
+        local humanoid = char:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid.AutoRotate = false
+        end
+    end
+end)
