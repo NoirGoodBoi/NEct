@@ -33,6 +33,7 @@ local espEnabled = false
 local noclipConnection = nil
 local infJumpConnection = nil
 local espConnections = {}
+local espCharacterConnections = {}
 
 local dragging = false
 local dragStart = nil
@@ -751,79 +752,132 @@ local function updatePlayerList()
     playerListScrolling.CanvasSize = UDim2.new(0, 0, 0, playerListLayout.AbsoluteContentSize.Y + 10)
 end
 
+local function updateHealthESP(plr, humanoid)
+    if not espConnections[plr] or not espConnections[plr].hpLabel then return end
+    local hp = humanoid.Health
+    local maxHp = humanoid.MaxHealth
+    local percent = math.floor((hp / maxHp) * 100)
+    local color = percent > 50 and Color3.fromRGB(100, 255, 100) or (percent > 25 and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(255, 0, 0))
+    espConnections[plr].hpLabel.Text = "❤️ " .. percent .. "%"
+    espConnections[plr].hpLabel.TextColor3 = color
+end
+
 local function createESP(plr)
     if not espEnabled then return end
     if plr == player then return end
-    if not plr.Character or not plr.Character:FindFirstChild("Head") then return end
+    if espConnections[plr] then return end
     
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "ESP_" .. plr.Name
-    billboard.Adornee = plr.Character.Head
-    billboard.Size = UDim2.new(0, 150, 0, 40)
-    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Parent = screenGui
-    
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 1, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    frame.BackgroundTransparency = 0.4
-    frame.BorderSizePixel = 2
-    frame.BorderColor3 = Color3.fromRGB(128, 0, 255)
-    frame.Parent = billboard
-    
-    local frameCorner = Instance.new("UICorner")
-    frameCorner.CornerRadius = UDim.new(0, 6)
-    frameCorner.Parent = frame
-    
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    nameLabel.Position = UDim2.new(0, 0, 0, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = plr.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.TextSize = 12
-    nameLabel.TextScaled = true
-    nameLabel.Parent = frame
-    
-    local hpLabel = Instance.new("TextLabel")
-    hpLabel.Size = UDim2.new(1, 0, 0.5, 0)
-    hpLabel.Position = UDim2.new(0, 0, 0.5, 0)
-    hpLabel.BackgroundTransparency = 1
-    hpLabel.Text = "❤️ 100%"
-    hpLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-    hpLabel.Font = Enum.Font.Gotham
-    hpLabel.TextSize = 10
-    hpLabel.TextScaled = true
-    hpLabel.Parent = frame
-    
-    espConnections[plr] = {
-        billboard = billboard,
-        hpLabel = hpLabel,
-        nameLabel = nameLabel
-    }
-    
-    local humanoid = plr.Character:FindFirstChild("Humanoid")
-    if humanoid then
-        local function updateHP()
-            if not espConnections[plr] then return end
-            local hp = humanoid.Health
-            local maxHp = humanoid.MaxHealth
-            local percent = math.floor((hp / maxHp) * 100)
-            local color = percent > 50 and Color3.fromRGB(100, 255, 100) or (percent > 25 and Color3.fromRGB(255, 200, 0) or Color3.fromRGB(255, 0, 0))
-            espConnections[plr].hpLabel.Text = "❤️ " .. percent .. "%"
-            espConnections[plr].hpLabel.TextColor3 = color
+    local function setupESPForCharacter()
+        local char = plr.Character
+        if not char then return end
+        
+        local head = char:FindFirstChild("Head")
+        if not head then return end
+        
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "ESP_" .. plr.Name
+        billboard.Adornee = head
+        billboard.Size = UDim2.new(0, 150, 0, 40)
+        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Parent = screenGui
+        
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        frame.BackgroundTransparency = 0.4
+        frame.BorderSizePixel = 2
+        frame.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        frame.Parent = billboard
+        
+        local frameCorner = Instance.new("UICorner")
+        frameCorner.CornerRadius = UDim.new(0, 6)
+        frameCorner.Parent = frame
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        nameLabel.Position = UDim2.new(0, 0, 0, 0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = plr.Name
+        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextSize = 12
+        nameLabel.TextScaled = true
+        nameLabel.Parent = frame
+        
+        local hpLabel = Instance.new("TextLabel")
+        hpLabel.Size = UDim2.new(1, 0, 0.5, 0)
+        hpLabel.Position = UDim2.new(0, 0, 0.5, 0)
+        hpLabel.BackgroundTransparency = 1
+        hpLabel.Text = "❤️ 100%"
+        hpLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        hpLabel.Font = Enum.Font.Gotham
+        hpLabel.TextSize = 10
+        hpLabel.TextScaled = true
+        hpLabel.Parent = frame
+        
+        espConnections[plr] = {
+            billboard = billboard,
+            hpLabel = hpLabel,
+            nameLabel = nameLabel
+        }
+        
+        local humanoid = char:FindFirstChild("Humanoid")
+        if humanoid then
+            local healthConnection
+            healthConnection = humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+                if not espConnections[plr] then
+                    healthConnection:Disconnect()
+                    return
+                end
+                updateHealthESP(plr, humanoid)
+            end)
+            updateHealthESP(plr, humanoid)
+            
+            if not espCharacterConnections[plr] then
+                espCharacterConnections[plr] = {}
+            end
+            table.insert(espCharacterConnections[plr], healthConnection)
         end
-        humanoid:GetPropertyChangedSignal("Health"):Connect(updateHP)
-        updateHP()
     end
+    
+    if plr.Character and plr.Character:FindFirstChild("Head") then
+        setupESPForCharacter()
+    end
+    
+    local charAddedConnection
+    charAddedConnection = plr.CharacterAdded:Connect(function(char)
+        if espConnections[plr] then
+            espConnections[plr].billboard:Destroy()
+            espConnections[plr] = nil
+        end
+        if espCharacterConnections[plr] then
+            for _, conn in ipairs(espCharacterConnections[plr]) do
+                conn:Disconnect()
+            end
+            espCharacterConnections[plr] = {}
+        end
+        wait(0.1)
+        setupESPForCharacter()
+    end)
+    
+    if not espCharacterConnections[plr] then
+        espCharacterConnections[plr] = {}
+    end
+    table.insert(espCharacterConnections[plr], charAddedConnection)
 end
 
 local function removeESP(plr)
     if espConnections[plr] then
         espConnections[plr].billboard:Destroy()
         espConnections[plr] = nil
+    end
+    
+    if espCharacterConnections[plr] then
+        for _, conn in ipairs(espCharacterConnections[plr]) do
+            conn:Disconnect()
+        end
+        espCharacterConnections[plr] = nil
     end
 end
 
@@ -1229,6 +1283,11 @@ closeButton.MouseButton1Click:Connect(function()
     for _, data in pairs(espConnections) do
         if data.billboard then data.billboard:Destroy() end
     end
+    for _, connections in pairs(espCharacterConnections) do
+        for _, conn in ipairs(connections) do
+            conn:Disconnect()
+        end
+    end
     screenGui:Destroy()
     specGui:Destroy()
 end)
@@ -1279,12 +1338,12 @@ end)
 
 game.Players.PlayerAdded:Connect(function(plr)
     if espEnabled and plr ~= player then
-        wait(0.5)
         createESP(plr)
     end
     if spectateListFrame.Visible then
         updateSpectateList()
     end
+    updatePlayerList()
 end)
 
 game.Players.PlayerRemoving:Connect(function(plr)
@@ -1295,6 +1354,7 @@ game.Players.PlayerRemoving:Connect(function(plr)
     if spectateListFrame.Visible then
         updateSpectateList()
     end
+    updatePlayerList()
 end)
 
 player.CharacterAdded:Connect(function(char)
