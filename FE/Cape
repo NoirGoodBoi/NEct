@@ -68,6 +68,17 @@ local function SaveConfig()
     end
 end
 
+local function ParseImageId(input)
+    if not input or input == "" then return "" end
+    if string.match(input, "^rbxassetid://") then
+        return input
+    end
+    if string.match(input, "^%d+$") then
+        return "rbxassetid://" .. input
+    end
+    return input
+end
+
 local CapeInstance = nil
 local HeartsModule = nil
 local currentHearts = {}
@@ -444,21 +455,22 @@ local function CreateNoirCape()
     end
     
     if Config.UseImageTexture and Config.ImageId and Config.ImageId ~= "" then
+        local parsedId = ParseImageId(Config.ImageId)
         local decal = Instance.new("Decal", Cape)
         decal.Face = Enum.NormalId.Back
-        decal.Texture = Config.ImageId
+        decal.Texture = parsedId
         
         local decalFront = Instance.new("Decal", Cape)
         decalFront.Face = Enum.NormalId.Front
-        decalFront.Texture = Config.ImageId
+        decalFront.Texture = parsedId
         
         local decalRight = Instance.new("Decal", Cape)
         decalRight.Face = Enum.NormalId.Right
-        decalRight.Texture = Config.ImageId
+        decalRight.Texture = parsedId
         
         local decalLeft = Instance.new("Decal", Cape)
         decalLeft.Face = Enum.NormalId.Left
-        decalLeft.Texture = Config.ImageId
+        decalLeft.Texture = parsedId
         
         Cape.Color = Color3.fromRGB(255, 255, 255)
     end
@@ -728,13 +740,13 @@ hpBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-MakeNumberInput(Content, 82, "Độ Cao Áo", 0, 1.2, 0.05, Config.PositionY, function(val)
+MakeNumberInput(Content, 82, "Độ Cao Áo", 0, 1.5, 0.05, Config.PositionY, function(val)
     Config.PositionY = val
     SaveConfig()
     if Config.Enabled then CreateNoirCape() end
 end)
 
-MakeNumberInput(Content, 125, "Kích Thước", 0.3, 1.2, 0.05, Config.Scale, function(val)
+MakeNumberInput(Content, 125, "Kích Thước", 0.3, 10, 0.05, Config.Scale, function(val)
     Config.Scale = val
     SaveConfig()
     if Config.Enabled then CreateNoirCape() end
@@ -950,14 +962,25 @@ local imageInput = Instance.new("TextBox", imageFrame)
 imageInput.Size = UDim2.new(0.55, 0, 0.5, 0)
 imageInput.Position = UDim2.new(0.4, 0, 0.25, 0)
 imageInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-imageInput.Text = Config.ImageId
+local displayId = Config.ImageId
+if string.match(displayId, "^rbxassetid://(%d+)$") then
+    displayId = string.match(displayId, "^rbxassetid://(%d+)$")
+end
+imageInput.Text = displayId
 imageInput.TextColor3 = Color3.new(1,1,1)
-imageInput.PlaceholderText = "rbxassetid://..."
+imageInput.PlaceholderText = "Nhập ID ảnh (VD: 1234567890)"
 Instance.new("UICorner", imageInput).CornerRadius = UDim.new(0, 6)
 
 imageInput.FocusLost:Connect(function()
-    Config.ImageId = imageInput.Text
+    local rawInput = imageInput.Text
+    local parsedId = ParseImageId(rawInput)
+    Config.ImageId = parsedId
     SaveConfig()
+    if string.match(parsedId, "^rbxassetid://(%d+)$") then
+        imageInput.Text = string.match(parsedId, "^rbxassetid://(%d+)$")
+    else
+        imageInput.Text = parsedId
+    end
     if Config.Enabled and Config.UseImageTexture then CreateNoirCape() end
 end)
 
