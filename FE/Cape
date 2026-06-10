@@ -44,8 +44,8 @@ local function MakeDraggable(frame, dragHandle)
 end
 
 local Config = {
-    Scale = 0.8,
-    PositionY = 0.7,
+    Scale = 1,
+    PositionY = 0.4,
     Color = Color3.fromRGB(0, 0, 0),
     TextOnCape = "NOIR",
     ImageId = "",
