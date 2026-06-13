@@ -1,0 +1,729 @@
+if _G.LimbControllerGUI then
+    pcall(function()
+        _G.LimbControllerGUI:Destroy()
+    end)
+    _G.LimbControllerGUI = nil
+end
+
+if _G.LimbControllerActive then
+    pcall(function()
+        if _G.limbExtender then
+            _G.limbExtender:Toggle(false)
+        end
+        if _G.limbExtenderCleanup then
+            _G.limbExtenderCleanup()
+        end
+    end)
+end
+
+repeat wait() until game.Players.LocalPlayer and game:IsLoaded()
+
+local player = game.Players.LocalPlayer
+local runService = game:GetService("RunService")
+local userInputService = game:GetService("UserInputService")
+
+_G.LimbControllerActive = true
+
+local LimbExtenderLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AAPVdev/scripts/refs/heads/main/LimbExtender.lua"))()
+local limbExtender = LimbExtenderLibrary({
+    LISTEN_FOR_INPUT = false,
+    USE_HIGHLIGHT = false,
+})
+_G.limbExtender = limbExtender
+
+local isMinimized = false
+local currentTab = "limbs"
+
+local limbSize = limbExtender:Get("LIMB_SIZE")
+local limbTransparency = limbExtender:Get("LIMB_TRANSPARENCY")
+local targetLimb = limbExtender:Get("TARGET_LIMB")
+local teamCheck = limbExtender:Get("TEAM_CHECK")
+local forcefieldCheck = limbExtender:Get("FORCEFIELD_CHECK")
+local limbCollisions = limbExtender:Get("LIMB_CAN_COLLIDE")
+
+local visibilityStates = {
+    ["Head"] = false,
+    ["Torso"] = false,
+    ["Right Arm"] = false,
+    ["Left Arm"] = false,
+    ["Right Leg"] = false,
+    ["Left Leg"] = false,
+}
+
+local btnWidth = 140
+local btnHeight = 40
+local col1 = 15
+local col2 = 165
+local row1 = 15
+local row2 = 65
+local row3 = 115
+local row4 = 165
+
+local limbsHeight = 260
+local userHeight = 210
+
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LimbControllerGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+_G.LimbControllerGUI = screenGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 320, 0, limbsHeight)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+mainFrame.BackgroundTransparency = 0.5
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(128, 0, 255)
+mainFrame.Active = true
+mainFrame.Draggable = false
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Color = Color3.fromRGB(128, 0, 255)
+mainStroke.Thickness = 2
+mainStroke.Transparency = 0.2
+mainStroke.Parent = mainFrame
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 35)
+header.Position = UDim2.new(0, 0, 0, 0)
+header.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+header.BackgroundTransparency = 0.3
+header.BorderSizePixel = 2
+header.BorderColor3 = Color3.fromRGB(128, 0, 255)
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 12)
+headerCorner.Parent = header
+
+local headerStroke = Instance.new("UIStroke")
+headerStroke.Color = Color3.fromRGB(128, 0, 255)
+headerStroke.Thickness = 1.5
+headerStroke.Transparency = 0.3
+headerStroke.Parent = header
+
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+userInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        if startPos then
+            mainFrame.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+
+userInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, -120, 1, 0)
+titleLabel.Position = UDim2.new(0, 15, 0, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = " LIMB CONTROLLER "
+titleLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 14
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+titleLabel.Parent = header
+
+local tabButton = Instance.new("TextButton")
+tabButton.Size = UDim2.new(0, 30, 1, 0)
+tabButton.Position = UDim2.new(1, -100, 0, 0)
+tabButton.BackgroundTransparency = 1
+tabButton.Text = "∈"
+tabButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+tabButton.Font = Enum.Font.GothamBold
+tabButton.TextSize = 18
+tabButton.Parent = header
+
+local minimizeButton = Instance.new("TextButton")
+minimizeButton.Size = UDim2.new(0, 30, 1, 0)
+minimizeButton.Position = UDim2.new(1, -65, 0, 0)
+minimizeButton.BackgroundTransparency = 1
+minimizeButton.Text = "–"
+minimizeButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+minimizeButton.Font = Enum.Font.GothamBold
+minimizeButton.TextSize = 20
+minimizeButton.Parent = header
+
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 30, 1, 0)
+closeButton.Position = UDim2.new(1, -35, 0, 0)
+closeButton.BackgroundTransparency = 1
+closeButton.Text = "×"
+closeButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextSize = 18
+closeButton.Parent = header
+
+local contentContainer = Instance.new("Frame")
+contentContainer.Size = UDim2.new(1, 0, 1, -35)
+contentContainer.Position = UDim2.new(0, 0, 0, 35)
+contentContainer.BackgroundTransparency = 1
+contentContainer.Parent = mainFrame
+
+local limbsTab = Instance.new("ScrollingFrame")
+limbsTab.Size = UDim2.new(1, 0, 1, 0)
+limbsTab.BackgroundTransparency = 1
+limbsTab.ScrollBarThickness = 4
+limbsTab.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
+limbsTab.CanvasSize = UDim2.new(0, 0, 0, limbsHeight - 10)
+limbsTab.Parent = contentContainer
+
+local limbsContainer = Instance.new("Frame")
+limbsContainer.Size = UDim2.new(1, 0, 0, limbsHeight - 10)
+limbsContainer.BackgroundTransparency = 1
+limbsContainer.Parent = limbsTab
+
+local userTab = Instance.new("ScrollingFrame")
+userTab.Size = UDim2.new(1, 0, 1, 0)
+userTab.BackgroundTransparency = 1
+userTab.ScrollBarThickness = 4
+userTab.ScrollBarImageColor3 = Color3.fromRGB(128, 0, 255)
+userTab.Visible = false
+userTab.CanvasSize = UDim2.new(0, 0, 0, userHeight - 10)
+userTab.Parent = contentContainer
+
+local userContainer = Instance.new("Frame")
+userContainer.Size = UDim2.new(1, 0, 0, userHeight - 10)
+userContainer.BackgroundTransparency = 1
+userContainer.Parent = userTab
+
+local function createStyledButton(parent, posX, posY, text, color, width)
+    local w = width or btnWidth
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, w, 0, btnHeight)
+    btn.Position = UDim2.new(0, posX, 0, posY)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    btn.BackgroundTransparency = 0.5
+    btn.BorderSizePixel = 2
+    btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    btn.Text = text
+    btn.TextColor3 = color or Color3.fromRGB(255, 255, 255 )
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.Parent = parent
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Color = Color3.fromRGB(128, 0, 255)
+    btnStroke.Thickness = 1.5
+    btnStroke.Transparency = 1
+    btnStroke.Parent = btn
+    
+    return btn
+end
+
+local function createStyledInput(parent, posX, posY, placeholder, text, width)
+    local w = width or btnWidth
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(0, w, 0, btnHeight)
+    input.Position = UDim2.new(0, posX, 0, posY)
+    input.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+    input.BackgroundTransparency = 0.5
+    input.BorderSizePixel = 2
+    input.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    input.PlaceholderText = placeholder
+    input.Text = text or ""
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.Font = Enum.Font.Gotham
+    input.TextSize = 12
+    input.Parent = parent
+    
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 8)
+    inputCorner.Parent = input
+    
+    local inputStroke = Instance.new("UIStroke")
+    inputStroke.Color = Color3.fromRGB(128, 0, 255)
+    inputStroke.Thickness = 1.5
+    inputStroke.Transparency = 1
+    inputStroke.Parent = input
+    
+    return input
+end
+
+local limbsToggle = createStyledButton(limbsContainer, col1, row1, " PHÓNG TO OFF", Color3.fromRGB(255, 100, 100))
+
+local targetLimbDropdown = Instance.new("TextButton")
+targetLimbDropdown.Size = UDim2.new(0, btnWidth, 0, btnHeight)
+targetLimbDropdown.Position = UDim2.new(0, col2, 0, row1)
+targetLimbDropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+targetLimbDropdown.BackgroundTransparency = 0.5
+targetLimbDropdown.BorderSizePixel = 2
+targetLimbDropdown.BorderColor3 = Color3.fromRGB(128, 0, 255)
+targetLimbDropdown.Text = " BỘ PHẬN: " .. targetLimb
+targetLimbDropdown.TextColor3 = Color3.fromRGB(200, 200, 200)
+targetLimbDropdown.Font = Enum.Font.GothamBold
+targetLimbDropdown.TextSize = 10
+targetLimbDropdown.Parent = limbsContainer
+
+local dropdownCorner = Instance.new("UICorner")
+dropdownCorner.CornerRadius = UDim.new(0, 8)
+dropdownCorner.Parent = targetLimbDropdown
+
+local sizeInput = createStyledInput(limbsContainer, col1, row2, "Kích thước (5-500)", tostring(limbSize), 80)
+local sizeApply = createStyledButton(limbsContainer, col1 + 85, row2, "APPLY", Color3.fromRGB(100, 255, 100), 55)
+
+local transInput = createStyledInput(limbsContainer, col2, row2, "Độ mờ (0-1)", tostring(limbTransparency), 80)
+local transApply = createStyledButton(limbsContainer, col2 + 85, row2, "APPLY", Color3.fromRGB(100, 255, 100), 55)
+
+local teamCheckToggle = createStyledButton(limbsContainer, col1, row3, " TEAM CHECK OFF", Color3.fromRGB(255, 100, 100))
+local forcefieldToggle = createStyledButton(limbsContainer, col2, row3, "️ FORCEFIELD OFF", Color3.fromRGB(255, 100, 100))
+local collisionToggle = createStyledButton(limbsContainer, col1, row4, " COLLISION OFF", Color3.fromRGB(255, 100, 100))
+
+local headToggle = createStyledButton(userContainer, col1, row1, " HEAD", Color3.fromRGB(200, 200, 200))
+local torsoToggle = createStyledButton(userContainer, col2, row1, " BODY", Color3.fromRGB(200, 200, 200))
+local rightArmToggle = createStyledButton(userContainer, col1, row2, " RIGHT ARM", Color3.fromRGB(200, 200, 200))
+local leftArmToggle = createStyledButton(userContainer, col2, row2, " LEFT ARM", Color3.fromRGB(200, 200, 200))
+local rightLegToggle = createStyledButton(userContainer, col1, row3, " RIGHT LEG", Color3.fromRGB(200, 200, 200))
+local leftLegToggle = createStyledButton(userContainer, col2, row3, " LEFT LEG", Color3.fromRGB(200, 200, 200))
+
+local dropdownPanel = Instance.new("Frame")
+dropdownPanel.Size = UDim2.new(0, 200, 0, 200)
+dropdownPanel.Position = UDim2.new(0, 0, 0, 0)
+dropdownPanel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+dropdownPanel.BackgroundTransparency = 0.3
+dropdownPanel.BorderSizePixel = 2
+dropdownPanel.BorderColor3 = Color3.fromRGB(128, 0, 255)
+dropdownPanel.Visible = false
+dropdownPanel.Parent = screenGui
+
+local dropdownCornerPanel = Instance.new("UICorner")
+dropdownCornerPanel.CornerRadius = UDim.new(0, 12)
+dropdownCornerPanel.Parent = dropdownPanel
+
+local dropdownScrolling = Instance.new("ScrollingFrame")
+dropdownScrolling.Size = UDim2.new(1, -10, 1, -10)
+dropdownScrolling.Position = UDim2.new(0, 5, 0, 5)
+dropdownScrolling.BackgroundTransparency = 1
+dropdownScrolling.ScrollBarThickness = 4
+dropdownScrolling.Parent = dropdownPanel
+
+local dropdownLayout = Instance.new("UIListLayout")
+dropdownLayout.Padding = UDim.new(0, 4)
+dropdownLayout.SortOrder = Enum.SortOrder.Name
+dropdownLayout.Parent = dropdownScrolling
+
+local function updateLimbDropdown()
+    for _, child in ipairs(dropdownScrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local limbsList = {}
+    local char = player.Character
+    if char then
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then
+                table.insert(limbsList, part.Name)
+            end
+        end
+    end
+    
+    table.sort(limbsList)
+    
+    for _, limbName in ipairs(limbsList) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 35)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        btn.BackgroundTransparency = 0.5
+        btn.BorderSizePixel = 2
+        btn.BorderColor3 = Color3.fromRGB(128, 0, 255)
+        btn.Text = limbName
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 12
+        btn.Parent = dropdownScrolling
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 8)
+        btnCorner.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            targetLimb = limbName
+            limbExtender:Set("TARGET_LIMB", targetLimb)
+            targetLimbDropdown.Text = " BỘ PHẬN: " .. targetLimb
+            dropdownPanel.Visible = false
+            if limbsToggle and limbsToggle.Text:find("ON") then
+                limbExtender:Toggle(true)
+            end
+        end)
+    end
+    
+    dropdownScrolling.CanvasSize = UDim2.new(0, 0, 0, dropdownLayout.AbsoluteContentSize.Y + 10)
+end
+
+local function syncBodyVisibility()
+    if not _G.LimbControllerActive then return end
+    local char = player.Character
+    if not char then return end
+    
+    local mapping = {
+        ["Head"] = {"Head"},
+        ["Torso"] = {"Torso", "UpperTorso", "LowerTorso"},
+        ["Right Arm"] = {"Right Arm", "RightUpperArm", "RightLowerArm", "RightHand"},
+        ["Left Arm"] = {"Left Arm", "LeftUpperArm", "LeftLowerArm", "LeftHand"},
+        ["Right Leg"] = {"Right Leg", "RightUpperLeg", "RightLowerLeg", "RightFoot"},
+        ["Left Leg"] = {"Left Leg", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot"},
+    }
+    
+    for partName, isHidden in pairs(visibilityStates) do
+        local targetParts = mapping[partName]
+        if targetParts then
+            for _, targetPartName in ipairs(targetParts) do
+                local part = char:FindFirstChild(targetPartName)
+                if part and part:IsA("BasePart") then
+                    local targetTrans = isHidden and 1 or 0
+                    if part.Transparency ~= targetTrans then
+                        part.Transparency = targetTrans
+                    end
+                    for _, child in pairs(part:GetChildren()) do
+                        if child:IsA("Decal") then
+                            child.Transparency = targetTrans
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function resetBodyVisibility()
+    local char = player.Character
+    if not char then return end
+    
+    local mapping = {
+        ["Head"] = {"Head"},
+        ["Torso"] = {"Torso", "UpperTorso", "LowerTorso"},
+        ["Right Arm"] = {"Right Arm", "RightUpperArm", "RightLowerArm", "RightHand"},
+        ["Left Arm"] = {"Left Arm", "LeftUpperArm", "LeftLowerArm", "LeftHand"},
+        ["Right Leg"] = {"Right Leg", "RightUpperLeg", "RightLowerLeg", "RightFoot"},
+        ["Left Leg"] = {"Left Leg", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot"},
+    }
+    
+    for _, targetParts in pairs(mapping) do
+        for _, targetPartName in ipairs(targetParts) do
+            local part = char:FindFirstChild(targetPartName)
+            if part and part:IsA("BasePart") then
+                part.Transparency = 0
+                for _, child in pairs(part:GetChildren()) do
+                    if child:IsA("Decal") then
+                        child.Transparency = 0
+                    end
+                end
+            end
+        end
+    end
+end
+
+limbsToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    if limbsToggle.Text:find("OFF") then
+        limbExtender:Toggle(true)
+        limbsToggle.Text = " PHÓNG TO ON"
+        limbsToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+        limbsToggle.BorderColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        limbExtender:Toggle(false)
+        limbsToggle.Text = " PHÓNG TO OFF"
+        limbsToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+        limbsToggle.BorderColor3 = Color3.fromRGB(128, 0, 255)
+    end
+end)
+
+sizeApply.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    local newSize = tonumber(sizeInput.Text)
+    if newSize and newSize >= 5 and newSize <= 500 then
+        limbSize = newSize
+        limbExtender:Set("LIMB_SIZE", limbSize)
+        if limbsToggle and limbsToggle.Text:find("ON") then
+            limbExtender:Toggle(true)
+        end
+    else
+        sizeInput.Text = tostring(limbSize)
+    end
+end)
+
+transApply.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    local newTrans = tonumber(transInput.Text)
+    if newTrans and newTrans >= 0 and newTrans <= 1 then
+        limbTransparency = newTrans
+        limbExtender:Set("LIMB_TRANSPARENCY", limbTransparency)
+        if limbsToggle and limbsToggle.Text:find("ON") then
+            limbExtender:Toggle(true)
+        end
+    else
+        transInput.Text = tostring(limbTransparency)
+    end
+end)
+
+targetLimbDropdown.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    updateLimbDropdown()
+    dropdownPanel.Visible = true
+    dropdownPanel.Position = UDim2.new(0, targetLimbDropdown.AbsolutePosition.X, 0, targetLimbDropdown.AbsolutePosition.Y + btnHeight)
+end)
+
+dropdownPanel.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local mousePos = userInputService:GetMouseLocation()
+        local panelPos = dropdownPanel.AbsolutePosition
+        local panelSize = dropdownPanel.AbsoluteSize
+        if not (mousePos.X >= panelPos.X and mousePos.X <= panelPos.X + panelSize.X and
+                mousePos.Y >= panelPos.Y and mousePos.Y <= panelPos.Y + panelSize.Y) then
+            dropdownPanel.Visible = false
+        end
+    end
+end)
+
+teamCheckToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    teamCheck = not teamCheck
+    limbExtender:Set("TEAM_CHECK", teamCheck)
+    if teamCheck then
+        teamCheckToggle.Text = " TEAM CHECK ON"
+        teamCheckToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        teamCheckToggle.Text = " TEAM CHECK OFF"
+        teamCheckToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+    if limbsToggle and limbsToggle.Text:find("ON") then
+        limbExtender:Toggle(true)
+    end
+end)
+
+forcefieldToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    forcefieldCheck = not forcefieldCheck
+    limbExtender:Set("FORCEFIELD_CHECK", forcefieldCheck)
+    if forcefieldCheck then
+        forcefieldToggle.Text = " FORCEFIELD ON"
+        forcefieldToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        forcefieldToggle.Text = " FORCEFIELD OFF"
+        forcefieldToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+    if limbsToggle and limbsToggle.Text:find("ON") then
+        limbExtender:Toggle(true)
+    end
+end)
+
+collisionToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    limbCollisions = not limbCollisions
+    limbExtender:Set("LIMB_CAN_COLLIDE", limbCollisions)
+    if limbCollisions then
+        collisionToggle.Text = " COLLISION ON"
+        collisionToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        collisionToggle.Text = " COLLISION OFF"
+        collisionToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+    if limbsToggle and limbsToggle.Text:find("ON") then
+        limbExtender:Toggle(true)
+    end
+end)
+
+headToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    visibilityStates["Head"] = not visibilityStates["Head"]
+    if visibilityStates["Head"] then
+        headToggle.Text = " HEAD (đã ẩn)"
+        headToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    else
+        headToggle.Text = " HEAD"
+        headToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    syncBodyVisibility()
+end)
+
+torsoToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    visibilityStates["Torso"] = not visibilityStates["Torso"]
+    if visibilityStates["Torso"] then
+        torsoToggle.Text = " BODY (đã ẩn)"
+        torsoToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    else
+        torsoToggle.Text = " BODY"
+        torsoToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    syncBodyVisibility()
+end)
+
+rightArmToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    visibilityStates["Right Arm"] = not visibilityStates["Right Arm"]
+    if visibilityStates["Right Arm"] then
+        rightArmToggle.Text = " RIGHT ARM (đã ẩn)"
+        rightArmToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    else
+        rightArmToggle.Text = " RIGHT ARM"
+        rightArmToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    syncBodyVisibility()
+end)
+
+leftArmToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    visibilityStates["Left Arm"] = not visibilityStates["Left Arm"]
+    if visibilityStates["Left Arm"] then
+        leftArmToggle.Text = " LEFT ARM (đã ẩn)"
+        leftArmToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    else
+        leftArmToggle.Text = " LEFT ARM"
+        leftArmToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    syncBodyVisibility()
+end)
+
+rightLegToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    visibilityStates["Right Leg"] = not visibilityStates["Right Leg"]
+    if visibilityStates["Right Leg"] then
+        rightLegToggle.Text = " RIGHT LEG (đã ẩn)"
+        rightLegToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    else
+        rightLegToggle.Text = " RIGHT LEG"
+        rightLegToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    syncBodyVisibility()
+end)
+
+leftLegToggle.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    visibilityStates["Left Leg"] = not visibilityStates["Left Leg"]
+    if visibilityStates["Left Leg"] then
+        leftLegToggle.Text = " LEFT LEG (đã ẩn)"
+        leftLegToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+    else
+        leftLegToggle.Text = " LEFT LEG"
+        leftLegToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+    syncBodyVisibility()
+end)
+
+local function resizeUIForTab()
+    if not _G.LimbControllerActive then return end
+    local targetHeight = currentTab == "limbs" and limbsHeight or userHeight
+    mainFrame:TweenSize(UDim2.new(0, 320, 0, targetHeight), "Out", "Quad", 0.15)
+end
+
+tabButton.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    if currentTab == "limbs" then
+        currentTab = "user"
+        limbsTab.Visible = false
+        userTab.Visible = true
+        titleLabel.Text = " USER "
+        tabButton.Text = "∋"
+    else
+        currentTab = "limbs"
+        limbsTab.Visible = true
+        userTab.Visible = false
+        titleLabel.Text = " PLAYER "
+        tabButton.Text = "∈"
+    end
+    resizeUIForTab()
+end)
+
+minimizeButton.MouseButton1Click:Connect(function()
+    if not _G.LimbControllerActive then return end
+    isMinimized = not isMinimized
+    if isMinimized then
+        mainFrame:TweenSize(UDim2.new(0, 320, 0, 35), "Out", "Quad", 0.2)
+        contentContainer.Visible = false
+        minimizeButton.Text = "+"
+    else
+        local targetHeight = currentTab == "limbs" and limbsHeight or userHeight
+        mainFrame:TweenSize(UDim2.new(0, 320, 0, targetHeight), "Out", "Quad", 0.2)
+        contentContainer.Visible = true
+        minimizeButton.Text = "–"
+    end
+end)
+
+local function fullCleanup()
+    _G.LimbControllerActive = false
+    
+    pcall(function()
+        limbExtender:Toggle(false)
+    end)
+    
+    pcall(function()
+        resetBodyVisibility()
+    end)
+    
+    pcall(function()
+        screenGui:Destroy()
+    end)
+    
+    _G.LimbControllerGUI = nil
+    _G.limbExtender = nil
+end
+
+closeButton.MouseButton1Click:Connect(function()
+    fullCleanup()
+end)
+
+player.CharacterAdded:Connect(function(char)
+    if not _G.LimbControllerActive then return end
+    wait(0.5)
+    syncBodyVisibility()
+    if limbsToggle and limbsToggle.Text:find("ON") then
+        limbExtender:Toggle(true)
+    end
+end)
+
+local renderSteppedConnection
+renderSteppedConnection = runService.RenderStepped:Connect(function()
+    if not _G.LimbControllerActive then
+        renderSteppedConnection:Disconnect()
+        return
+    end
+    syncBodyVisibility()
+    
+    if dropdownPanel and dropdownPanel.Visible then
+        dropdownPanel.Position = UDim2.new(0, targetLimbDropdown.AbsolutePosition.X, 0, targetLimbDropdown.AbsolutePosition.Y + btnHeight)
+    end
+end)
+
+_G.limbExtenderCleanup = fullCleanup
+
+wait(1)
+updateLimbDropdown()
+syncBodyVisibility()
